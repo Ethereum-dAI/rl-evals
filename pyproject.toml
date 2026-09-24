@@ -1,0 +1,28 @@
+[project]
+name = "mainnet-attack-gym"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "gabrielfior", email = "fior.gbm@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "eth-keys>=0.8.0",
+    "eth-utils>=6.0.0",
+    "httpx>=0.28.1",
+    "pycryptodome>=3.23.0",
+    "rlp>=5.0.0",
+]
+
+[project.scripts]
+mainnet-attack-gym = "mainnet_attack_gym:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
