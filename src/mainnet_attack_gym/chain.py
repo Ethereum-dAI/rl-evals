@@ -26,15 +26,15 @@ def etherscan(**query):
         time.sleep(wait)
     _last_call[0] = time.time()
     query.update(chainid=1, apikey=os.environ["ETHERSCAN_API_KEY"])
-    for attempt in range(5):
+    for attempt in range(10):
         d = _client.get(ETHERSCAN_URL, params=query).json()
         result = d.get("result")
         if d.get("status") == "1":
             return result
-        if str(d.get("message", "")).startswith("No transactions"):
+        if str(d.get("message", "")).startswith(("No transactions", "No records")):
             return []
         if isinstance(result, str) and "rate limit" in result.lower():
-            time.sleep(1 + attempt)
+            time.sleep(2 + 2 * attempt)   # several miners share one key's 5 req/s
             continue
         raise RuntimeError(f"etherscan {query.get('action')}: {d.get('message')} {result}")
     raise RuntimeError("etherscan rate limit persisted after retries")

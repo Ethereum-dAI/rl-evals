@@ -1,0 +1,14 @@
+{
+ "reason": "gold policy did not score correct on the fork (scripts/check_rubrics.py --gold-all)",
+ "dropped": {
+  "nft_mint": [
+   "nft_mint-011"
+  ],
+  "lp_mint": [
+   "lp_mint-010"
+  ],
+  "nft_transfer": [
+   "nft_transfer-007"
+  ]
+ }
+}

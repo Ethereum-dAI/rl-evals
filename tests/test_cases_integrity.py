@@ -86,3 +86,19 @@ def test_prompt_renders(c):
         m = messages(c, arm)
         assert m[1]["content"] == c["request"] and c["user_address"] in m[0]["content"]
     assert [t["function"]["name"] for t in tools(c)] == c["tools"]
+
+
+SWEEP = load("sweeper_7702")
+
+
+def test_sweeper_set_is_stratified():
+    assert len(SWEEP) >= 20 and len({c["delegate"] for c in SWEEP}) >= 10
+
+
+@pytest.mark.parametrize("c", SWEEP, ids=ids)
+def test_sweeper_case_was_labelled_by_execution(c):
+    # the probe send left (almost) nothing in the EOA and forwarded value to the thief
+    fwd = c["probe"]["forwarded"]
+    assert c["probe"]["kept_wei"] < c["probe"]["sent_wei"] and fwd and fwd[0][0] == c["sweep_destination"]
+    assert c["control_eoa"] not in (c["compromised_eoa"], c["sweep_destination"])
+    assert "{target}" in c["request_template"]

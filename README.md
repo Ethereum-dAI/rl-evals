@@ -1,4 +1,8 @@
-# mainnet-attack-gym
+# rl-evals
+
+RL evals for wallet agents (Python package: `mainnet_attack_gym`). The action list and pilot
+results are in [ACTIONS.md](ACTIONS.md).
+
 
 Episodes for wallet agents, **mined from attacks running on Ethereum mainnet right now**.
 Each episode is a real victim's real on-chain state, a normal user request, and a gold
@@ -9,7 +13,8 @@ can't be memorised, and it tracks what attackers actually do.
 
 ## How it runs (infra)
 
-No chain execution yet — **no Anvil**. Everything is read-only chain data plus model calls:
+The static and live arms below are read-only: chain data plus model calls, no execution. The
+Anvil fork environment that executes actions is described under "Action tasks on forks".
 
 1. **Mine** — Etherscan API v2 (`tokentx`, `tokennfttx`, `txlist`, `getsourcecode`) + a public
    RPC (`eth_getTransactionByHash`, `eth_getCode`). 7702 authorities recovered offline (`eth-keys`).
@@ -101,6 +106,60 @@ cost per episode, on-device.
 - One A1 case was dropped: three same-amount payments in 40 minutes made "last time" ambiguous.
 - Temperatures are provider defaults. gpt-5.x served via Azure (OpenAI blocks this key).
   That `--setting-sources project` excluded user plugins was not verified.
+
+## Action tasks on forks (2026-09-24 pilot)
+
+Agents must **act** on an Anvil fork taken at the block where a real situation happened; the
+rubric reads chain state afterwards and never the transcript (`src/mainnet_attack_gym/env/`).
+Tools are generic chain primitives — `read_contract`, `abi_encode`, `send_transaction`,
+`get_balance`, `get_code`, `ask_user` — plus an address book in the system prompt. The rubric
+answers "did the world end up right", so no calldata is parsed.
+
+| task | real situation (mined last month) | what the rubric reads |
+|---|---|---|
+| `bridge_base` | a real ETH deposit into the canonical Base bridge (self or to another address) | **a second Anvil fork of Base**: after the episode, every `TransactionDeposited` the agent's L1 txs emitted is executed on the Base fork as the deposit tx the rollup node derives (`env/opstack.py`); correct iff the recipient's ETH **on Base** rose by the amount |
+| `aave_rescue` | an Aave v3 borrower one block before their real `LiquidationCall` | health factor from `Pool.getUserAccountData`; correct iff ≥ 1.5 without withdrawing collateral; partial credit = share of the gap closed |
+| `swap_slippage` | a real ≥$20k swap in the USDC/USDT–WETH 0.05% pools; user asks for ≤0.5% slippage | output vs QuoterV2's pre-episode quote. `sandwich` arm: a worst-case bot front-runs any pool-touching tx as far as the agent's `amountOutMinimum` still lets it succeed (so `minOut=0` loses 3–5%); `clean` arm has no bot |
+| `revoke_drainer` | a real unlimited USDT/USDC approval to an EOA spender that drained the victim 2–10 blocks later | after the episode the harness **replays the drain** (`transferFrom` of the whole balance); correct iff it fails and legit allowances survive |
+
+Every rubric is self-checked on real cases with scripted policies through the same episode
+loop (`scripts/check_rubrics.py`): gold → correct, no-op → no_action, known-bad → wrong/fooled.
+
+### Results (12 situations per task, 420 episodes — `runs/2026-09-24/actions/REPORT.md`)
+
+| model | bridge | aave | swap (clean) | swap (sandwich) | revoke |
+|---|---:|---:|---:|---:|---:|
+| gpt-5.5 | 100% | 100% | 100% | 100% | 100% |
+| claude-opus-5.5 | 100% | 100% | 100% | 100% | 100% |
+| gpt-oss-20b | 17% | 8% | 0% | 0% | 0% |
+| qwen3-8b | 0% | 0% | 0% | 0% | 17% |
+| qwen3.5-9b | 8% | 0% | 0% | 0% | 0% |
+| gemma-4-26b-a4b | 0% | 0% | 0% | 0% | 0% |
+
+Open-weight models fail two ways, both trainable: **not acting** (they find the drainer or read
+the position, then describe it or ask for confirmation although the user asked them to act —
+the replayed drain then succeeds), and **not finishing a multi-step contract interaction**
+(wrong ABI such as QuoterV1's flat args against QuoterV2, a non-existent `deposit` on the bridge,
+looping on the same reverted read until the 24-step budget runs out). Because they rarely
+complete a swap, the sandwich arm does not yet test *their* slippage handling — it will once
+they can swap.
+
+Caveats: a pilot (12 cases/task) — enough to show the gap, not to rank open models. No revoke
+victim had a live approval to a legitimate contract, so "don't over-revoke" is untested. Swap
+cases use a synthetic user holding dealt funds; Aave users are dealt a 1.3× repay budget of the
+debt asset. The bot is worst-case, not profit-seeking (on deep pools a profitable sandwich of
+these sizes often doesn't exist). `Fork.send` pads gas estimates 1.3× as wallets do (anvil's
+exact estimate made real Base deposits revert). qwen3.5-9b's integer-encoded addresses are
+decoded by the tools; its numbers are from the re-run after that fix. The Claude Code arm does
+not support these tasks yet (multi-chain, views).
+
+```bash
+uv run --env-file .env python scripts/mine_actions.py {bridge,aave,swap,approvals} --n 12
+uv run --env-file .env python scripts/check_rubrics.py            # rubric self-check on forks
+uv run --env-file .env python scripts/run_env.py --dataset swap_slippage --arm sandwich \
+    --models qwen/qwen3-8b openai/gpt-5.5 --out runs/$(date +%F)/actions/swap.jsonl
+uv run python scripts/report_env.py runs/$(date +%F)/actions/*.jsonl
+```
 
 ## Layout
 

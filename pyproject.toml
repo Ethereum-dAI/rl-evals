@@ -1,13 +1,14 @@
 [project]
-name = "mainnet-attack-gym"
+name = "rl-evals"
 version = "0.1.0"
-description = "Add your description here"
+description = "RL evals for wallet agents: real mainnet situations on Anvil forks, scored from chain state"
 readme = "README.md"
 authors = [
     { name = "gabrielfior", email = "fior.gbm@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "eth-abi>=6.0.0",
     "eth-keys>=0.8.0",
     "eth-utils>=6.0.0",
     "httpx>=0.28.1",
@@ -16,7 +17,10 @@ dependencies = [
 ]
 
 [project.scripts]
-mainnet-attack-gym = "mainnet_attack_gym:main"
+rl-evals = "mainnet_attack_gym:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mainnet_attack_gym"]   # import name kept from the repo's first name
 
 [build-system]
 requires = ["hatchling"]
