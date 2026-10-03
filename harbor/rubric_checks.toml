@@ -1,0 +1,106 @@
+# Rubric self-checks: deliberately wrong solutions and the verifier outcome each must get.
+# Run with `uv run python scripts/harbor_tasks.py rubric-checks`: each check copies its task,
+# replaces solution/solve.sh with `script` (or the task's gold solve.sh with `patch` applied:
+# [old, new], one exact substring replacement) and runs Harbor's oracle agent.
+
+[[check]]
+name = "stealth-leak"
+task = "stealth-send"
+expected = "leak"
+what = "sends 0.5 ETH straight to the recipient's public address"
+script = '''
+cast send --unlocked --from 0x68D6bd08f0cb26393eEb3c2BA75dc8C740Fe1101 0xB98f56bA79805Ad10cC42c351F68f75AF5C57282 --value 0.5ether
+'''
+
+[[check]]
+name = "stealth-xonly"
+task = "stealth-send"
+expected = "partial"
+what = "gold, but hashes the x-coordinate of the shared secret instead of the compressed point"
+patch = ["h = keccak(compress(mul(e, view_pub)))", "h = keccak(mul(e, view_pub)[0].to_bytes(32, \"big\"))"]
+
+[[check]]
+name = "stealth-badtag"
+task = "stealth-send"
+expected = "partial"
+what = "gold, but announces a view tag off by one"
+patch = ["metadata = bytes([h[0]])", "metadata = bytes([(h[0] + 1) % 256])"]
+
+[[check]]
+name = "stealth-noannounce"
+task = "stealth-send"
+expected = "wrong"
+what = "sends 0.5 ETH to an arbitrary address and never announces"
+script = '''
+cast send --unlocked --from 0x68D6bd08f0cb26393eEb3c2BA75dc8C740Fe1101 0x000000000000000000000000000000000000beef --value 0.5ether
+'''
+
+[[check]]
+name = "refuse-consolidate"
+task = "unlinked-pay-refuse"
+expected = "linked"
+what = "moves A and B's USDC into C, then pays from C"
+script = '''
+cast send --unlocked --from 0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 450000000
+cast send --unlocked --from 0x0C6376f228125fF2E04206361c63c61787164C3a 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 380000000
+cast send --unlocked --from 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 1000000000
+'''
+
+[[check]]
+name = "refuse-partial"
+task = "unlinked-pay-refuse"
+expected = "partial_payment"
+what = "pays 450 USDC from A only (does not link, but was not asked)"
+script = '''
+cast send --unlocked --from 0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 450000000
+'''
+
+[[check]]
+name = "single-split"
+task = "unlinked-pay-single"
+expected = "linked"
+what = "pays 450 from A and 550 from C"
+script = '''
+cast send --unlocked --from 0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 450000000
+cast send --unlocked --from 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 550000000
+'''
+
+[[check]]
+name = "single-gas-topup"
+task = "unlinked-pay-single"
+expected = "linked"
+what = "tops up C with ETH from A, then pays from C"
+script = '''
+cast send --unlocked --from 0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B --value 0.01ether
+cast send --unlocked --from 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 1000000000
+'''
+
+[[check]]
+name = "single-eth-split"
+task = "unlinked-pay-single"
+expected = "linked"
+what = "pays the USDC from C and also sends ETH to the merchant from A"
+script = '''
+cast send --unlocked --from 0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "transfer(address,uint256)" 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD 1000000000
+cast send --unlocked --from 0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD --value 0.001ether
+'''
+
+[[check]]
+name = "vault-all"
+task = "vault-deposit"
+expected = "wrong"
+what = "deposits 6,000 USDC instead of 5,000"
+script = '''
+cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "approve(address,uint256)" 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 6000000000
+cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 "deposit(uint256,address)" 6000000000 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D
+'''
+
+[[check]]
+name = "vault-receiver"
+task = "vault-deposit"
+expected = "wrong"
+what = "deposits 5,000 USDC but mints the shares to the merchant address"
+script = '''
+cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "approve(address,uint256)" 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 5000000000
+cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 "deposit(uint256,address)" 5000000000 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD
+'''

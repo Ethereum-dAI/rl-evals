@@ -1,0 +1,46 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "ethereum-dai/aave-rescue"
+version = "1.0.0"
+description = "Rescue an Aave v3 position one block before its real liquidation"
+authors = []
+keywords = ["ethereum", "aave", "defi", "anvil"]
+
+[metadata]
+difficulty = "medium"
+category = "onchain-action"
+source_case = "aave_rescue-001"
+source_tx = "0xea2e1b49f0f6edf54e1ca285aac21f20581b491637da7faeebec8f65cff54abe"
+
+
+# Chain state for this task, read by scripts/harbor_tasks.py sync into
+# environment/chain/setup.json for the sidecar (harbor/_shared/chain/node.py).
+[metadata.chain]
+case = "aave_rescue-001: the borrower one block before the real liquidation in tx 0xea2e1b49f0f6edf54e1ca285aac21f20581b491637da7faeebec8f65cff54abe"
+fork_block = 25984759
+senders = ["0x69c0bb9a94d4d22b770d44c048faf5df87482527"]
+erc20 = [["0xdac17f958d2ee523a2206206994597c13d831ec7", "0x69c0bb9a94d4d22b770d44c048faf5df87482527", "12500851848"]]   # [token, holder, at least this many base units]
+
+[metadata.chain.eth]   # top up to at least this many wei
+"0x69c0bb9a94d4d22b770d44c048faf5df87482527" = "1000000000000000000"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]

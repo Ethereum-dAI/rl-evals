@@ -1,0 +1,51 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "ethereum-dai/stealth-send"
+version = "1.0.0"
+description = "Pay a recipient privately through an EIP-5564 stealth address"
+authors = []
+keywords = ["ethereum", "privacy", "stealth-address", "erc-5564", "anvil"]
+
+[metadata]
+category = "onchain-action"
+source = "adapted from kelp (github.com/kassandraoftroy/kohaku-helper)"
+
+
+# Chain state for this task, read by scripts/harbor_tasks.py sync into
+# environment/chain/setup.json for the sidecar (harbor/_shared/chain/node.py).
+[metadata.chain]
+case = "synthetic: a fresh user wallet pays a fresh recipient whose scheme-1 stealth meta-address is registered in ERC-6538. Keys are keccak('rl-evals/stealth-send/...') labels; the private keys live only in tests/score.py."
+fork_block = 26103526
+senders = ["0x68D6bd08f0cb26393eEb3c2BA75dc8C740Fe1101"]
+erc20 = []   # [token, holder, at least this many base units]
+
+[metadata.chain.eth]   # top up to at least this many wei
+"0x68D6bd08f0cb26393eEb3c2BA75dc8C740Fe1101" = "2000000000000000000"
+"0xB98f56bA79805Ad10cC42c351F68f75AF5C57282" = "10000000000000000"
+
+[[metadata.chain.calls]]   # setup transaction, sent from an impersonated account
+from = "0xB98f56bA79805Ad10cC42c351F68f75AF5C57282"
+to = "0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538"
+data = "0x042c7aa300000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004203873a4f26af6c29f20d59404e8daf7dbd71f60dac06c87939efafae55c396c62002d55694be3c62d3c7b3e40bfdf37b3ac6cd8ed4ad594d5609fc776362a2106618000000000000000000000000000000000000000000000000000000000000"
+value = "0"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]

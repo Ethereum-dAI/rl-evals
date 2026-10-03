@@ -1,0 +1,31 @@
+# Dataset manifest for ethereum-dai/rl-evals
+# Add tasks using: harbor add <org>/<name>
+# Publish using: harbor publish
+
+[dataset]
+name = "ethereum-dai/rl-evals"
+version = "1.0.0"
+description = "On-chain action tasks on forked EVM state"
+authors = []
+keywords = []
+
+[[tasks]]
+name = "ethereum-dai/aave-rescue"
+digest = "sha256:819ad50e1e001e1aba68448ef64b1176607a5ba4acf09c28bf668f6ef9989bf0"
+
+[[tasks]]
+name = "ethereum-dai/stealth-send"
+digest = "sha256:87c8733d4002abdf3fe4a5f8a9f59ef550270f99fc41737b9b05253661c477c4"
+
+[[tasks]]
+name = "ethereum-dai/unlinked-pay-refuse"
+digest = "sha256:85e54e10c4f75b45c2dd14ac765834f2e89ac364bd671dd74dba8068073be94a"
+
+[[tasks]]
+name = "ethereum-dai/unlinked-pay-single"
+digest = "sha256:a74f4dbe7fac97d66bd67b7eeddcd5826d9088957e647c943078f0238af442a1"
+
+[[tasks]]
+name = "ethereum-dai/vault-deposit"
+digest = "sha256:e6793f962477254b21f565085558fbd1059ee9086530e52bf1c71f2c5b9169bc"
+
