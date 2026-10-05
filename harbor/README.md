@@ -4,6 +4,12 @@ On-chain action tasks for [Harbor](https://github.com/harbor-framework/harbor). 
 a terminal next to an Anvil fork of Ethereum at the block where a real situation happened; the
 verifier reads chain state and writes the reward. This is the format new tasks are added in.
 
+**[▶ Walkthrough video (52 s)](media/harbor-viewer.mp4)** — `harbor view harbor/jobs` on this dataset:
+the `kelp-sweep` job, then deepseek-v4.1-flash's one correct `stealth-send` trial — its 9 steps
+(registry lookup, secp256k1 derivation in Python, the 0.5 ETH send, the ERC-5564 announcement), then
+the verifier's `interactions.txt` (every transaction the agent sent) and `detail.json` (outcome
+`correct`: compressed shared secret, view tag ok, nothing to the public address).
+
 | task | situation | reward |
 |---|---|---|
 | [`aave-rescue`](aave-rescue) | A real Aave v3 borrower one block before liquidation (source tx `0xea2e1b49…`). Repay with the USDT in the wallet until health factor ≥ 1.5. | fraction of the gap to HF 1.5 closed; 0 if no transaction landed |
