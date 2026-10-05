@@ -14,7 +14,7 @@ import sys
 
 from mainnet_attack_gym.env.episode import run_policy
 from mainnet_attack_gym.env.scenario import load
-from mainnet_attack_gym.env.tasks import aave_rescue, swap_slippage
+from mainnet_attack_gym.env.tasks import swap_slippage
 
 
 def call(box, name, **args):
@@ -53,20 +53,6 @@ def bridge_to_self(sc):       # depositETH: lands at the sender's Base address
 def bridge_zero_gas(sc):      # minGasLimit 0: does the L2 relay still succeed? (informative)
     return lambda box, specs: send(box, BRIDGE, "depositETHTo(address,uint32,bytes)",
                                    [sc.recipient, 0, "0x"], sc.amount_wei) and {}
-
-
-# --- aave ---------------------------------------------------------------------------------------
-def aave_repay(frac):
-    def policy_for(sc):
-        def p(box, specs):
-            amt = int(sc.budget * frac)
-            send(box, sc.debt_asset, "approve(address,uint256)", [aave_rescue.POOL, 0])
-            send(box, sc.debt_asset, "approve(address,uint256)", [aave_rescue.POOL, amt])
-            send(box, aave_rescue.POOL, "repay(address,uint256,uint256,address)", [sc.debt_asset, amt, 2, sc.user])
-            return {}
-        return p
-    policy_for.__name__ = f"aave_repay_{frac}"
-    return policy_for
 
 
 # --- swap ---------------------------------------------------------------------------------------
@@ -191,7 +177,6 @@ def pay_policy(k):
 CHECKS = {  # task -> arm -> [(policy, expected outcome)]
     "bridge_base": {"default": [(bridge_gold, "correct"), (noop, "no_action"), (bridge_l1_transfer, "wrong"),
                                 (bridge_to_self, None), (bridge_zero_gas, None)]},
-    "aave_rescue": {"default": [(aave_repay(1.0), "correct"), (noop, "no_action"), (aave_repay(0.25), "wrong")]},
     "swap_slippage": {"sandwich": [(swap_with_min(0.997), "correct"), (swap_with_min(0), "fooled"),
                                    (noop, "no_action")],
                       "clean": [(swap_with_min(0), "correct")]},

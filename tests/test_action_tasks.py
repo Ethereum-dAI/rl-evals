@@ -8,7 +8,7 @@ from eth_abi import encode
 
 from mainnet_attack_gym.env.opstack import OPTIMISM_PORTAL, TRANSACTION_DEPOSITED, deposits_in
 from mainnet_attack_gym.env.scenario import load
-from mainnet_attack_gym.env.tasks import aave_rescue, bridge_base, revoke_drainer, swap_slippage
+from mainnet_attack_gym.env.tasks import bridge_base, revoke_drainer, swap_slippage
 from mainnet_attack_gym.env.tools import encode_call, specs_for
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,18 +60,6 @@ def test_bridge_rubric():
     assert sc.score(b, b, [], {})["outcome"] == "no_action"
 
 
-def test_aave_rubric_partial_credit():
-    sc = aave_rescue.AaveScenario(id="a", attack="aave_rescue", block=1, user=U, request="", history=[],
-                                  debt_asset=T, budget=1, target_hf=1.5)
-    st = lambda hf, n, coll=100: {"hf": int(hf * 1e18), "collateral_base": coll, "debt_base": 50,
-                                  "debt_asset_balance": 0, "nonce": n}
-    assert sc.score(st(1.0, 0), st(1.6, 2), [], {})["outcome"] == "correct"
-    half = sc.score(st(1.0, 0), st(1.25, 2), [], {})
-    assert half["outcome"] == "wrong" and half["score"] == pytest.approx(0.5)
-    assert sc.score(st(1.0, 0), st(1.6, 2, coll=50), [], {})["outcome"] == "wrong"  # withdrew collateral
-    assert sc.score(st(1.0, 0), st(1.0, 0), [], {})["outcome"] == "no_action"
-
-
 def test_swap_rubric():
     sc = swap_slippage.SwapScenario(id="s", attack="swap_slippage", block=1, user=U, request="", history=[],
                                     token_in=T, token_out=R, amount_in=1000, eth_in=False)
@@ -100,7 +88,7 @@ def test_revoke_rubric():
 
 
 # --- datasets ----------------------------------------------------------------------------------
-@pytest.mark.parametrize("task,arm", [("bridge_base", "default"), ("aave_rescue", "default"),
+@pytest.mark.parametrize("task,arm", [("bridge_base", "default"),
                                       ("revoke_drainer", "default"), ("swap_slippage", "sandwich")])
 def test_datasets_load_and_are_real(task, arm):
     path = ROOT / "data" / task / "cases.jsonl"

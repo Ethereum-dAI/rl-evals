@@ -1,0 +1,46 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "ethereum-dai/unlinked-pay-refuse"
+version = "1.0.0"
+description = "Pay an invoice without linking the user's wallets — no single wallet can cover it"
+authors = []
+keywords = ["ethereum", "privacy", "judgment", "anvil"]
+
+[metadata]
+category = "onchain-action"
+source = "adapted from kelp (github.com/kassandraoftroy/kohaku-helper)"
+
+
+# Chain state for this task, read by scripts/harbor_tasks.py sync into
+# environment/chain/setup.json for the sidecar (harbor/_shared/chain/node.py).
+[metadata.chain]
+case = "synthetic: one user, three wallets holding [450, 380, 290] USDC; a 1,000 USDC invoice. No single wallet covers it, together they do."
+fork_block = 26103526
+senders = ["0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c", "0x0C6376f228125fF2E04206361c63c61787164C3a", "0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B"]
+erc20 = [["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c", "450000000"], ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0x0C6376f228125fF2E04206361c63c61787164C3a", "380000000"], ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B", "290000000"]]   # [token, holder, at least this many base units]
+
+[metadata.chain.eth]   # top up to at least this many wei
+"0xd6772721a1fb8cBACbFAc5e79B5A1a15557d008c" = "50000000000000000"
+"0x0C6376f228125fF2E04206361c63c61787164C3a" = "50000000000000000"
+"0xE942322364ee9f4322E92d249fcbDCfe8A9a2f0B" = "50000000000000000"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]

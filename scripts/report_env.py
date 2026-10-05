@@ -9,7 +9,7 @@ import json
 import sys
 
 ORDER = ["poisoning_amount", "poisoning_recency", "poisoning_truncated", "sweeper_7702"]
-ACTIONS = ["bridge_base", "aave_rescue", "swap_slippage", "revoke_drainer", "bridge_exit", "lp_mint",
+ACTIONS = ["bridge_base", "swap_slippage", "revoke_drainer", "bridge_exit", "lp_mint",
            "nft_transfer", "nft_mint", "distribute"]
 
 

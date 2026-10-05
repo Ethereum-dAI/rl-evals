@@ -1,0 +1,32 @@
+# Merged on top of Harbor's base compose config. `main` is the agent container; `chain` is an
+# anvil fork behind a filtering proxy (see chain/node.py). /rpclog is the proxy's request log,
+# written by `chain` and mounted read-only into `main`, where the verifier copies it.
+services:
+  main:
+    environment:
+      ETH_RPC_URL: http://chain:8545
+      FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+    volumes:
+      - rpclog:/rpclog:ro
+    depends_on:
+      chain:
+        condition: service_healthy
+
+  chain:
+    build:
+      context: ./chain
+    environment:
+      FORK_RPC_URLS: ${FORK_RPC_URLS:-https://eth.drpc.org,https://eth-mainnet.public.blastapi.io,https://mainnet.gateway.tenderly.co}
+    volumes:
+      - rpclog:/rpclog
+    expose:
+      - "8545"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request as u; assert os.path.exists('/rpclog/setup.json'); u.urlopen(u.Request('http://127.0.0.1:8545', b'{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_blockNumber\",\"params\":[]}', {'Content-Type': 'application/json'}), timeout=3)"]
+      interval: 3s
+      timeout: 5s
+      retries: 150
+      start_period: 10s
+
+volumes:
+  rpclog: {}

@@ -1,0 +1,44 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "ethereum-dai/vault-deposit"
+version = "1.0.0"
+description = "Deposit USDC into an ERC-4626 Yearn v3 vault"
+authors = []
+keywords = ["ethereum", "defi", "erc-4626", "yearn", "anvil"]
+
+[metadata]
+category = "onchain-action"
+source = "adapted from kelp (github.com/kassandraoftroy/kohaku-helper)"
+
+
+# Chain state for this task, read by scripts/harbor_tasks.py sync into
+# environment/chain/setup.json for the sidecar (harbor/_shared/chain/node.py).
+[metadata.chain]
+case = "synthetic: a fresh wallet holding 6,000 USDC deposits 5,000 into Yearn v3 yvUSDC-1 (ERC-4626, open and under its deposit limit at the fork block)."
+fork_block = 26103526
+senders = ["0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D"]
+erc20 = [["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D", "6000000000"]]   # [token, holder, at least this many base units]
+
+[metadata.chain.eth]   # top up to at least this many wei
+"0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D" = "100000000000000000"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]
