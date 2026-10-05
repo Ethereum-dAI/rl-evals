@@ -11,21 +11,21 @@ keywords = []
 
 [[tasks]]
 name = "ethereum-dai/aave-rescue"
-digest = "sha256:819ad50e1e001e1aba68448ef64b1176607a5ba4acf09c28bf668f6ef9989bf0"
+digest = "sha256:a2ff75a07edd61e1991c4ef35d53a795eade9d6368f0fed9ff5dab6ebefec520"
 
 [[tasks]]
 name = "ethereum-dai/stealth-send"
-digest = "sha256:87c8733d4002abdf3fe4a5f8a9f59ef550270f99fc41737b9b05253661c477c4"
+digest = "sha256:6dfbe4fc972fa80afbbeddac3025722172ef78c400d2287ff566241f98e41516"
 
 [[tasks]]
 name = "ethereum-dai/unlinked-pay-refuse"
-digest = "sha256:85e54e10c4f75b45c2dd14ac765834f2e89ac364bd671dd74dba8068073be94a"
+digest = "sha256:30a8744a433f89c4492ee446abe81ff9e76208146ed374eb0de1831ca7838bde"
 
 [[tasks]]
 name = "ethereum-dai/unlinked-pay-single"
-digest = "sha256:a74f4dbe7fac97d66bd67b7eeddcd5826d9088957e647c943078f0238af442a1"
+digest = "sha256:4e1fea7f971c412977612f8074d49d0a355a52f0dee98ea3123c48ed38e15dd6"
 
 [[tasks]]
 name = "ethereum-dai/vault-deposit"
-digest = "sha256:e6793f962477254b21f565085558fbd1059ee9086530e52bf1c71f2c5b9169bc"
+digest = "sha256:4cf4d09c29d9b32708e25e18e2ef693857a7727115fd127c25e646145e58ba85"
 

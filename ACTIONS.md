@@ -207,15 +207,17 @@ job, and kept locally under `harbor/jobs/` (gitignored).
 | 2026-10-02 | 13, 14, unlinked pair | Harbor, terminus-2 | luna, deepseek-v4.1-flash, 4 open × 3 | 72 | $4.44 | jobs `kelp-sweep`, `kelp-sweep-luna` |
 | 2026-10-02 | all Harbor tasks | Harbor | gold (`oracle`) / no-op (`nop`) | 10 | — | jobs `oracle`, `nop` |
 | 2026-10-02 | 13, 14, unlinked pair | Harbor | 11 sabotaged solutions | 11 | — | job `rubric-checks` |
+| 2026-10-05 | all Harbor tasks | Harbor | gold + 13 sabotaged solutions (allowlist proxy) | 18 | — | jobs `oracle-v2`, `rubric-checks-v2` |
 
 Harbor tables are regenerated with `uv run python scripts/harbor_tasks.py summary harbor/results.jsonl --job <job>`
 (`--trials` for per-trial transactions). The full per-model tables and trace findings for the
 Harbor runs are in [`harbor/README.md`](harbor/README.md). Rubric self-checks: gym actions via
-`scripts/check_rubrics.py`; Harbor tasks via `oracle` / `nop` plus 11 sabotaged solutions in
+`scripts/check_rubrics.py`; Harbor tasks via `oracle` / `nop` plus 13 sabotaged solutions in
 [`harbor/rubric_checks.toml`](harbor/rubric_checks.toml) (leak, x-only secret, wrong view tag, no
 announcement, consolidation, partial payment, split payment, gas top-up, ETH split, wrong vault
-amount, wrong receiver), run by `uv run python scripts/harbor_tasks.py rubric-checks`: 11/11 as expected
-on 2026-10-02.
+amount, wrong receiver, Aave partial repay with its partial-credit reward, Aave rescue that
+withdraws collateral), run by `uv run python scripts/harbor_tasks.py rubric-checks`: 13/13 as
+expected on 2026-10-05.
 
 ## Why open models fail
 

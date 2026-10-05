@@ -162,12 +162,17 @@ commit `harbor/results.jsonl`.
 Rubric self-check: gold must score 1 (`-a oracle`), the no-op agent 0 (`-a nop`, except
 unlinked-pay-refuse, where doing nothing is correct), and every sabotaged solution in
 [`rubric_checks.toml`](rubric_checks.toml) must get its expected outcome:
-`uv run python scripts/harbor_tasks.py rubric-checks` (11/11 on 2026-10-02, job `rubric-checks`).
+`uv run python scripts/harbor_tasks.py rubric-checks` (13/13 on 2026-10-05, job `rubric-checks-v2`).
+A check may also bound the reward (`reward = [lo, hi]`): aave-rescue's partial repay must earn
+about a quarter of the gap, and a rescue that also withdraws collateral full HF credit but `wrong`.
 
 - **The fork lives in a sidecar.** Anvil listens on `127.0.0.1` inside `chain`; the agent only
-  reaches a proxy that forwards read methods and `eth_sendTransaction` from the task's sender
-  wallets. `anvil_*` / `evm_*` cheat codes, `eth_sendRawTransaction` (anvil's dev keys are public
-  and funded) and sends from any other account are refused, so the only way to move the score is a
+  reaches a proxy that forwards an exact allowlist of read methods and `eth_sendTransaction` from
+  the task's sender wallets. Everything else is refused: `anvil_*` / `evm_*` cheat codes,
+  `eth_sendRawTransaction` (anvil's dev keys are public and funded), sends from any other account,
+  and anvil's other sending `eth_*` methods (`eth_sendUnsignedTransaction` sends from any address
+  with no signature; `eth_send*Sync` skip a sender check keyed on the method name). It is an
+  allowlist, not a prefix rule, for exactly that reason. The only way to move the score is a
   real transaction from the user's wallet.
 - **No private key.** Sender wallets are impersonated at startup (`cast send --unlocked --from`).
   Setup tops up ETH, deals ERC-20s by writing the balance slot, and runs setup txs (stealth-send

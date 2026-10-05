@@ -15,10 +15,12 @@ Each task's setup.json sits next to this file, rendered by the same sync from th
 2. Apply setup.json, then mine one block and write its number to /rpclog/setup.json. Verifiers
    read "before" state at that block, which lives in the local fork — a historical read at or
    below fork_block would go back to the archive RPC (which once returned a truncated body).
-3. Serve 0.0.0.0:8545 — the only port the agent sees. It forwards read methods and
-   eth_sendTransaction from `senders` only. Cheat codes (anvil_*, evm_*, hardhat_*), raw
-   transactions (anvil's dev keys are public and funded) and signing are refused, so the only
-   way to change state is a real transaction from the user's wallet.
+3. Serve 0.0.0.0:8545 — the only port the agent sees. It forwards an exact allowlist of read
+   methods plus eth_sendTransaction from `senders` only; everything else is refused. The list is
+   exact, not a prefix match: anvil also serves state-changing `eth_*` methods with no sender
+   check (eth_sendUnsignedTransaction, eth_sendTransactionSync, eth_sendRawTransactionSync, ...),
+   besides cheat codes (anvil_*, evm_*), raw transactions (anvil's dev keys are public and
+   funded) and signing. The only way to change state is a real transaction from the user's wallet.
 4. Every request is appended to /rpclog/rpc.jsonl (method, target, selector, result or error,
    and for sends the tx hash and receipt status). /rpclog is mounted read-only in the agent
    container; the verifier copies it into the trial's verifier logs.
@@ -44,9 +46,17 @@ ANVIL = "http://127.0.0.1:8546"
 LOG_DIR = "/rpclog"
 LOG_LOCK = threading.Lock()
 
-ALLOWED_PREFIXES = ("eth_", "net_", "web3_", "debug_trace")
-REFUSED = {"eth_sendRawTransaction", "eth_sign", "eth_signTransaction", "eth_signTypedData",
-           "eth_signTypedData_v3", "eth_signTypedData_v4", "eth_accounts", "eth_requestAccounts"}
+SEND = "eth_sendTransaction"   # the one state-changing method; refusal() checks its sender
+READS = {
+    "eth_blockNumber", "eth_chainId", "eth_syncing", "eth_gasPrice", "eth_maxPriorityFeePerGas",
+    "eth_feeHistory", "eth_blobBaseFee", "eth_getBalance", "eth_getCode", "eth_getStorageAt",
+    "eth_getTransactionCount", "eth_getAccountInfo", "eth_getProof", "eth_call", "eth_estimateGas",
+    "eth_createAccessList", "eth_getLogs", "eth_getBlockByNumber", "eth_getBlockByHash",
+    "eth_getBlockReceipts", "eth_getBlockTransactionCountByNumber", "eth_getBlockTransactionCountByHash",
+    "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_getTransactionByBlockNumberAndIndex",
+    "eth_getTransactionByBlockHashAndIndex", "net_version", "net_listening", "net_peerCount",
+    "web3_clientVersion", "web3_sha3", "debug_traceTransaction", "debug_traceCall",
+}
 
 
 def log(*a) -> None:
@@ -121,7 +131,7 @@ def receipt(tx_hash: str, timeout: float = 60) -> dict:
         if r:
             return r
         time.sleep(0.2)
-    raise SystemExit(f"no receipt for {tx_hash}")
+    raise TimeoutError(f"no receipt for {tx_hash}")   # not SystemExit: the proxy calls this too
 
 
 def setup() -> None:
@@ -151,9 +161,9 @@ def setup() -> None:
 
 def refusal(req: dict) -> str | None:
     method = req.get("method", "")
-    if method in REFUSED or not method.startswith(ALLOWED_PREFIXES):
+    if method not in READS and method != SEND:
         return f"method {method} is not available on this node"
-    if method == "eth_sendTransaction":
+    if method == SEND:
         tx = (req.get("params") or [{}])[0]
         if str(tx.get("from", "")).lower() not in SENDERS:
             return f"only the user's wallet(s) {sorted(SENDERS)} can send transactions"

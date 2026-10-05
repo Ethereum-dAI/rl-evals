@@ -229,13 +229,17 @@ def rubric_checks(a) -> None:
     for res in (jobs / a.job_name).glob("*/result.json"):
         name = json.loads(res.read_text()).get("task_name", "").split("/")[-1]
         detail = res.parent / "verifier" / "detail.json"
-        got[name] = json.loads(detail.read_text())["outcome"] if detail.exists() else "unscored"
+        rew = (json.loads(res.read_text()).get("verifier_result") or {}).get("rewards") or {}
+        got[name] = (json.loads(detail.read_text())["outcome"] if detail.exists() else "unscored", rew.get("reward"))
     bad = 0
     print("\n| check | task | expected | got |\n|---|---|---|---|")
     for c in checks:
-        ok = got.get(c["name"]) == c["expected"]
+        outcome, reward = got.get(c["name"], ("missing", None))
+        lo, hi = c.get("reward", (float("-inf"), float("inf")))
+        ok = outcome == c["expected"] and reward is not None and lo - 1e-9 <= reward <= hi + 1e-9
         bad += not ok
-        print(f"| {c['name']} | {c['task']} | {c['expected']} | {got.get(c['name'], 'missing')}"
+        want = c["expected"] + (f" @ [{lo}, {hi}]" if "reward" in c else "")
+        print(f"| {c['name']} | {c['task']} | {want} | {outcome} @ {reward}"
               f"{'' if ok else '  **MISMATCH**'} |")
     print(f"\n{len(checks) - bad}/{len(checks)} as expected")
     sys.exit(1 if bad else 0)

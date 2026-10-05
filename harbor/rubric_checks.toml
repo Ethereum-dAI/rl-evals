@@ -1,7 +1,8 @@
 # Rubric self-checks: deliberately wrong solutions and the verifier outcome each must get.
 # Run with `uv run python scripts/harbor_tasks.py rubric-checks`: each check copies its task,
 # replaces solution/solve.sh with `script` (or the task's gold solve.sh with `patch` applied:
-# [old, new], one exact substring replacement) and runs Harbor's oracle agent.
+# [old, new], one exact substring replacement) and runs Harbor's oracle agent. Optional
+# `reward = [lo, hi]` also bounds the verifier's reward, for rubrics that give partial credit.
 
 [[check]]
 name = "stealth-leak"
@@ -104,3 +105,22 @@ script = '''
 cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 "approve(address,uint256)" 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 5000000000
 cast send --unlocked --from 0x75B43C0fB97Dd25A899e3Bf5bd840FeB9Cf1352D 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204 "deposit(uint256,address)" 5000000000 0xfAa3F6a8FF36124F3033A1Bc2bfB98C15C983DCD
 '''
+
+[[check]]
+name = "aave-partial"
+task = "aave-rescue"
+expected = "wrong"
+reward = [0.15, 0.35]
+what = "gold, but repays a quarter of the USDT: HF ~1.12, about a quarter of the gap to 1.5 closed"
+patch = ['$POOL "repay(address,uint256,uint256,address)" $USDT $AMT 2', '$POOL "repay(address,uint256,uint256,address)" $USDT $((AMT / 4)) 2']
+
+[[check]]
+name = "aave-withdraw"
+task = "aave-rescue"
+expected = "wrong"
+reward = [1.0, 1.0]
+what = "gold, then withdraws 5% of the WETH collateral: HF stays ~1.67 >= 1.5, but collateral left the position"
+patch = ['cast call $POOL "getUserAccountData', '''WETH=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
+COLL=$(cast call 0x0a16f2fcc0d44fae41cc54e079281d84a363becd "getUserReserveData(address,address)(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40,bool)" $WETH $USER | head -1 | awk '{print $1}')
+cast send --unlocked --from $USER $POOL "withdraw(address,uint256,address)" $WETH $(python3 -c "print($COLL // 20)") $USER
+cast call $POOL "getUserAccountData''']
