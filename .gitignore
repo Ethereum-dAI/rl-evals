@@ -20,3 +20,6 @@ harbor/*/environment/chain/node.py
 harbor/*/tests/chainlib.py
 harbor/*/tests/test.sh
 !harbor/_shared/**
+
+training/math_grpo/out/
+training/math_grpo/.venv/

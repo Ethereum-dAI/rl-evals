@@ -1,0 +1,8 @@
+{
+ "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "n": 1319,
+ "accuracy": 0.4874905231235785,
+ "error": 0.5125094768764216,
+ "truncated": 69,
+ "unparsed_reference": 0
+}

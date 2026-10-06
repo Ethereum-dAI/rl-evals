@@ -1,0 +1,4 @@
+trl[vllm]>=1.14.1
+math-verify
+datasets
+matplotlib
