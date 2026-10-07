@@ -1,0 +1,8 @@
+{
+ "model": "out/plateau",
+ "n": 1319,
+ "accuracy": 0.0,
+ "error": 1.0,
+ "truncated": 0,
+ "unparsed_reference": 0
+}

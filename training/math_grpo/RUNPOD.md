@@ -76,3 +76,29 @@ polling minute is billed.
 
 Read the result honestly: one seed, 1,319 test problems, standard error about 1.4 points per number.
 `plot.py` prints whether the greedy difference is inside the 2-SE noise band.
+
+## Later runs (2026-10-06 and 10-07): none beat the baseline
+
+All greedy test error on the same 1,319 problems. Baseline varies 51.1 to 52.0% between pods.
+
+| run | lr / schedule | steps | greedy error before -> after | verdict |
+|---|---|---|---|---|
+| 300 steps | 3e-6 cosine | 300 | 52.0 -> 52.0 | no change; reward plateaued near 0.6, entropy fell 0.36 -> 0.08 |
+| plateau, 1e-5 | 1e-5, halve on plateau | 300 | 51.1 -> 100.0 | **diverged**: by step 40 the model emitted short garbage, reward 0, zero gradient, no recovery |
+| plateau, 5e-6 | 5e-6, halve on plateau (patience 2) | 211 (time cap) | 51.1 -> 53.4 | slightly worse; truncations 62 -> 141 |
+| adaptive entropy | 3e-6 + `--adaptive-entropy` | 200 (checkpoint) | 51.1 -> 51.6 | no change; the run crashed at step 229 (disk full) |
+
+Takeaways:
+- Full fine-tuning at lr 1e-5 diverges for this 0.5B model. A dead run (all rewards 0) has exactly zero
+  gradient, so no scheduler can recover it. Watch `reward` and `frac_reward_zero_std` in the first 40 steps
+  and kill early.
+- The plateau scheduler only ever lowers the LR, so it cannot beat its starting rate. It is stepped on a
+  noisy eval (200 problems, T=1), so cuts are partly random.
+- This model and setup do not improve greedy GSM8K accuracy in 200 to 300 steps. The reward gain that does
+  appear is mostly learning to finish in the right format.
+- Disk: each checkpoint saved optimizer state (~6 GB). `train.py` now uses `save_only_model=True` and
+  `save_total_limit=1`. This change is untested on a pod.
+- Pods: an RTX 4090 on a CUDA 13 host was sometimes out of stock, and one host had a broken GPU
+  (`cuInit` returned 999 while `nvidia-smi` looked fine). Test with
+  `python3 -c "import ctypes;print(ctypes.CDLL('libcuda.so.1').cuInit(0))"` before installing anything.
+  An A40 (48 GB) on CUDA 13.2 worked at about 7 s/step.

@@ -36,12 +36,32 @@ def main():
     p.add_argument("--time-limit-min", type=float, default=120)
     p.add_argument("--lr", type=float, default=3e-6)
     p.add_argument("--eval-every", type=int, default=50)
+    p.add_argument(
+        "--sched", choices=["cosine", "plateau"], default="cosine",
+        help="plateau = halve the LR when sampled test accuracy stops improving",
+    )
+    p.add_argument("--adaptive-entropy", action="store_true", help="TRL adaptive entropy bonus")
     a = p.parse_args()
 
     train = load_gsm8k("train")
     # 200 test problems, sampled at temperature 1 every --eval-every steps (a trend line,
     # not the headline number; eval.py gives the greedy full-test number).
     evalset = load_gsm8k("test", n=200)
+
+    sched = {}
+    if a.sched == "plateau":
+        # ReduceLROnPlateau is stepped by the Trainer after each evaluation with eval_reward.
+        # The eval set is small and sampled, so wait 2 evals before cutting, and cut gently.
+        sched = dict(
+            lr_scheduler_type="reduce_lr_on_plateau",
+            lr_scheduler_kwargs={"mode": "max", "factor": 0.5, "patience": 2, "min_lr": 1e-7},
+            metric_for_best_model="eval_reward",
+            greater_is_better=True,
+        )
+    else:
+        sched = dict(lr_scheduler_type="cosine", warmup_steps=15)
+    if a.adaptive_entropy:
+        sched.update(entropy_coef=0.01, use_adaptive_entropy=True, entropy_target=0.2)
 
     args = GRPOConfig(
         output_dir=a.out,
@@ -55,8 +75,6 @@ def main():
         beta=0.0,
         mask_truncated_completions=True,
         learning_rate=a.lr,
-        lr_scheduler_type="cosine",
-        warmup_steps=15,
         max_steps=a.max_steps,
         bf16=True,
         gradient_checkpointing=True,
@@ -72,8 +90,10 @@ def main():
         logging_steps=5,
         save_strategy="steps",
         save_steps=100,
-        save_total_limit=2,
+        save_total_limit=1,
+        save_only_model=True,   # optimizer state is ~6 GB per checkpoint and filled the pod disk once
         report_to="none",
+        **sched,
     )
     trainer = GRPOTrainer(
         model=a.model,

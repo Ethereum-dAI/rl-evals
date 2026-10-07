@@ -1,0 +1,8 @@
+{
+ "model": "out/run",
+ "n": 1319,
+ "accuracy": 0.4799090219863533,
+ "error": 0.5200909780136467,
+ "truncated": 74,
+ "unparsed_reference": 0
+}
