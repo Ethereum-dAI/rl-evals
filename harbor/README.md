@@ -70,6 +70,53 @@ jobs `kelp-sweep*` (new tasks, 72 trials, $4.44) and `sweep-*` (aave-rescue).
 | vault-deposit | 3/3 | 0-3/3 | warm-up; still fails gpt-oss and Gemma-26B |
 | unlinked-pay (pair) | 3/3 | 3/3 | ceiling — needs the gas-top-up variant to be worth training on |
 
+## Eval on aave-rescue (baseline for post-training: few-shot, distillation, GRPO)
+
+Everyone comparing post-training methods on `aave-rescue` should use this exact command, so scores
+come from the same test:
+
+```bash
+uv tool install harbor
+uv run python scripts/harbor_tasks.py sync                      # once after cloning
+# OPENROUTER_API_KEY in the environment, or pass --env-file path/to/.env
+harbor run -p harbor -i aave-rescue -a terminus-2 -m openrouter/qwen/qwen3-8b \
+  -k 3 -n 3 --jobs-dir harbor/jobs --job-name qwen3-8b-aave-rescue   # -k = attempts; 1 is noisy
+uv run python scripts/harbor_tasks.py summary harbor/jobs/qwen3-8b-aave-rescue --trials
+```
+
+Reward is the fraction of the gap to HF 1.5 closed (0 if no transaction landed); "pass" = HF ≥ 1.5.
+To evaluate a post-trained model, swap `-m` (any LiteLLM id, e.g. a model served behind an
+OpenAI-compatible endpoint: `-m openai/<name> --ak api_base=http://host:port/v1`).
+Run `-a oracle` (must score 1) and `-a nop` (must score 0) first if you change the task.
+
+**Baseline (2026-10-07):** `qwen/qwen3-8b` via OpenRouter, terminus-2, 1 attempt each. n = 1: re-run
+with `-k 3` or more before quoting a rate.
+
+| image / prompt | result | steps | $ |
+|---|---|---:|---:|
+| `cast` + bare `python3` (job `qwen3-8b-or-aave-rescue`) | **0/1, reward 0.00**, `no_action`, 20-min timeout, no tx sent | 29 | 0.064 |
+| + `web3`, `eth_abi`, `eth_account`, `eth_utils`, `requests` preinstalled and named in the prompt (job `qwen3-8b-or-aave-rescue-py`, the current task) | **0/1, reward 0.00**, `no_action`, 20-min timeout, no tx sent | 24 | 0.061 |
+
+Both runs failed the same way: the model never read the position. `cast call` to the PoolDataProvider
+reverted on wrong signatures and flags (`--contract`, `--interactive`), it hand-decoded hex and used `bc`
+(not installed), and it tried `deposit` with the wrong argument count instead of `repay`. With the
+Python packages available it still stayed in `cast`/bash, so the gap is tool use and ABI knowledge,
+which is what post-training should move. Gold (`-a oracle`) scores 1.0 (HF 1.761) on the new image.
+
+**Not the same test as the 0% in ACTIONS.md.** That came from the custom env (`scripts/run_env.py`):
+
+| | custom env (ACTIONS.md, 12 cases) | Harbor (this) |
+|---|---|---|
+| agent | OpenRouter tool-calling loop, ≤ 24 steps | `terminus-2`, a terminal agent, 20-min timeout |
+| tools | 7 typed function tools: `get_token_transfers`, `get_balance`, `get_code`, `read_contract(address, signature, args, returns)`, `abi_encode`, `send_transaction`, `ask_user` (+ optional `get_transaction`, `abi_decode`) | one tool: keystrokes in a shell with Foundry's `cast`, `jq`, and `python3` with `web3`, `eth_abi`, `eth_account`, `eth_utils` (named in the prompt); no typed ABI tools, the model builds calls and decodes output itself |
+| acting | `send_transaction` JSON; ABI encoding done by the tool | `cast send --unlocked --from …` |
+| ending | no tool call, `ask_user`, or step cap | model says task complete, or timeout |
+| cases | 12 borrowers, fork per case | 1 case (`aave_rescue-001`) |
+| skills / MCP | none | none (`mcp_servers = []`); instruction.md carries the address book |
+| chain access | tools call anvil directly | exact-allowlist RPC proxy; cheat codes refused |
+
+The two scores are not comparable; the Harbor run is the new baseline.
+
 ## Earlier sweep: cheap frontier candidates on aave-rescue (2026-10-02)
 
 terminus-2 agent, OpenRouter. Rows: `results.jsonl`, jobs `sweep-*` and `terminus2-*`. Table: `uv run python scripts/harbor_tasks.py summary harbor/results.jsonl --task aave-rescue`
