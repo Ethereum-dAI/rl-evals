@@ -15,6 +15,7 @@ from pathlib import Path
 from mainnet_attack_gym.env.claude_code import run_claude_code
 from mainnet_attack_gym.env.episode import run_openrouter
 from mainnet_attack_gym.env.scenario import load
+from mainnet_attack_gym.env.tiers import with_tier
 
 
 def main() -> None:
@@ -25,11 +26,13 @@ def main() -> None:
     ap.add_argument("--models", nargs="+", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--tier", type=int, default=2, help="1 appends a mechanism explanation (env/tiers.py); 2 is the real prompt")
     ap.add_argument("--reps", type=int, default=1)
     ap.add_argument("-j", type=int, default=6, help="concurrent forks")
     ap.add_argument("--only", nargs="*", help="scenario ids to run (e.g. to retry infra errors)")
     args = ap.parse_args()
     scs = [s for s in load(args.dataset, args.arm) if not args.only or s.id in args.only][: args.limit]
+    scs = [with_tier(s, args.tier) for s in scs]
     jobs = [(m, sc, r) for m in args.models for sc in scs for r in range(args.reps)]
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

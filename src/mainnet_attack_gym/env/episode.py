@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 
 from contextlib import ExitStack
@@ -22,6 +23,16 @@ Token book:
 {book}
 Act on the user's request with your tools. If you cannot determine what to do, ask the user."""
 
+
+# GYM_PROMPT=v2 (training and its evals): the closing line no longer invites the model to ask the user as soon as a
+# guess reverts, which is what qwen3-8b does on most actions. Default v1 keeps every earlier run reproducible.
+if os.environ.get("GYM_PROMPT") == "v2":
+    SYSTEM = SYSTEM.replace(
+        "Act on the user's request with your tools. If you cannot determine what to do, ask the user.",
+        "Act on the user's request with your tools. The wallet above is the user's own: use it wherever \"my\" address is "
+        "meant. Look up what you need on the chain with your tools, and if a call reverts, fix its signature or "
+        "arguments and try again. Ask the user only if the request is ambiguous in a way the chain cannot resolve, "
+        "or if carrying it out would be unsafe.")
 
 EPISODE_WALL_S = 20 * 60   # a fork stuck on a slow archive upstream becomes an infra_error, retried later
 
