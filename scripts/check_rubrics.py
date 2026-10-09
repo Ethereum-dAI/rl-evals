@@ -194,6 +194,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", nargs="*", default=list(CHECKS))
     ap.add_argument("--case", type=int, nargs="*", default=[0])
+    ap.add_argument("--suffix", default="", help="dataset suffix, e.g. _var for scripts/gen_variants.py output")
     ap.add_argument("--gold-all", action="store_true",
                     help="run only the gold policy on EVERY case; print ids whose gold is not correct")
     a = ap.parse_args()
@@ -209,8 +210,8 @@ def main() -> None:
                     except Exception as e:  # noqa: BLE001
                         err = repr(e)[:120]
                 return sc.id, "crash " + err
-            with ThreadPoolExecutor(4) as ex:
-                res = list(ex.map(one, load(task, arm)))
+            with ThreadPoolExecutor(8) as ex:
+                res = list(ex.map(one, load(task + a.suffix, arm)))
             bad_ids = [i for i, o in res if o != "correct"]
             print(task, f"gold correct {len(res) - len(bad_ids)}/{len(res)}", "FAIL:", res and [r for r in res if r[1] != "correct"],
                   flush=True)

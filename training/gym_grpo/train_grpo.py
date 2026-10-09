@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import random
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -27,6 +28,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from mainnet_attack_gym.env.scenario import load
 from render import render_ids
+from reward import _junk, _real_attempt
 from rollout import run_episode
 
 
@@ -50,7 +52,8 @@ def api(url: str, path: str, body: dict) -> None:
 
 
 def is_heldout(case_id: str, frac: float) -> bool:
-    return int(hashlib.sha1(case_id.encode()).hexdigest(), 16) % 1000 < frac * 1000
+    base = re.sub(r"-v\d+$", "", case_id)   # a variant is held out with the real case it came from
+    return int(hashlib.sha1(base.encode()).hexdigest(), 16) % 1000 < frac * 1000
 
 
 def main() -> None:
@@ -116,7 +119,10 @@ def main() -> None:
         for r, sc in zip(rows, scs):
             if r["reward"] is not None:
                 out.setdefault(sc.attack, []).append(r)
-        return {k: {"pass": round(sum(r["outcome"] == "correct" for r in v) / len(v), 3), "n": len(v)} for k, v in out.items()}
+        frac = lambda v, f: round(sum(f(r) for r in v) / len(v), 3)
+        return {k: {"pass": frac(v, lambda r: r["outcome"] == "correct"), "n": len(v),
+                    "attempt": frac(v, lambda r: any(_real_attempt(t) for t in r.get("sent") or [])),
+                    "junk": frac(v, lambda r: any(_junk(t) for t in r.get("sent") or []))} for k, v in out.items()}
 
     def run_eval(m: dict, step: int) -> None:
         evaluated["policy"] = policy

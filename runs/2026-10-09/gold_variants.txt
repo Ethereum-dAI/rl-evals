@@ -1,0 +1,3 @@
+distribute gold correct 48/48 FAIL: []
+nft_transfer gold correct 44/44 FAIL: []
+bridge_base gold correct 48/48 FAIL: []

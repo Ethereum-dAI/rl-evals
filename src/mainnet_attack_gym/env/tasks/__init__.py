@@ -16,4 +16,8 @@ BUILDERS = {
     "nft_transfer": nft_transfer.from_case,
     "nft_mint": nft_mint.from_case,
     "distribute": distribute.from_case,
+    # generated variants of the real cases (scripts/gen_variants.py): same rubric, free fields changed
+    "distribute_var": distribute.from_case,
+    "nft_transfer_var": nft_transfer.from_case,
+    "bridge_base_var": bridge_base.from_case,
 }
