@@ -260,3 +260,18 @@ The pass gain is real but run2 also learned to send empty no-op transactions (a 
 empty-calldata tx), because reward v2 paid a 0.05 bonus for any send. Reward v3 (`reward.py`) pays only for a
 non-reverted call with calldata and charges for junk sends. Not yet trained; do not use run2's adapter as is.
 Actions 3, 5, 7, 8 never attempt a send even with hints; action 12 is always fooled (zero reward variance).
+
+### Reward v3 with the Unsloth trainer (run3c, run4; 2026-10-09)
+
+Same Qwen3-8B, v2 prompt, 4-bit Unsloth LoRA trainer on a 46 GB L40S with vLLM serving bf16 beside it. Reward v3 charges for
+junk sends (reverted or empty-calldata transactions). Held-out set = 98 episodes (25 real cases + variants of them, k=2); base = 3.1%.
+
+| run | steps | held-out pass | poisoning | revoke | nft_transfer | distribute | junk sends |
+|---|--:|--:|--:|--:|--:|--:|---|
+| base | 0 | 3.1% | 15% | 0% | 0% | 0% | 25% (poisoning), 30% (nft) |
+| run3c (uniform over 204 scenarios) | 21 | 5.1% | 25% | 0% | 0% | 0% | 0% everywhere |
+| run4 (action-weighted sampling) | 12 | 9.2% | 30% | 0% (attempts 100%) | 10% | 0% | 3-20% |
+
+Run2's 37% did not reproduce under v3: that gain depended on junk sends. Run3c lost it because the variants crowded the learnable actions out of the
+batch (revoke ~0.35 prompts/step vs ~0.9 in run2); run4 fixes that with `--action-weights`. Variants (140, gold-verified) exist for distribute,
+nft_transfer and bridge_base only; the other actions' verifiers are tied to a real on-chain event.

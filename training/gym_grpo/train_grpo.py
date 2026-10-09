@@ -62,6 +62,7 @@ def main() -> None:
     ap.add_argument("--vllm-url", default="http://localhost:8000/v1")
     ap.add_argument("--pools", nargs="+", required=True, metavar="DATASET:ARM")
     ap.add_argument("--case-weights", type=Path, help="json {scenario id: sampling weight}; default uniform. Built from a base-rate sweep (summarize_sweep.py)")
+    ap.add_argument("--action-weights", help="e.g. poisoning_amount=3,revoke_drainer=3,distribute=1.5: sample an ACTION by these weights, then a scenario within it, so generated variants cannot crowd out the actions that carry signal")
     ap.add_argument("--heldout-frac", type=float, default=0.25)
     ap.add_argument("--out", type=Path, default=Path("out/run"))
     ap.add_argument("--steps", type=int, default=40)
@@ -148,7 +149,15 @@ def main() -> None:
         if step == a.steps:
             log.write(json.dumps(m) + "\n"); log.flush(); print(m, flush=True)
             break
-        chosen = rng.choices(train, weights=[weights.get(sc.id, 1.0) for sc in train], k=a.prompts)
+        if a.action_weights:
+            aw = {k: float(v) for k, v in (kv.split("=") for kv in a.action_weights.split(","))}
+            acts = sorted({sc.attack for sc in train})
+            per = {k: [sc for sc in train if sc.attack == k] for k in acts}
+            chosen = []
+            for k in rng.choices(acts, weights=[aw.get(k, 1.0) for k in acts], k=a.prompts):
+                chosen.append(rng.choices(per[k], weights=[weights.get(sc.id, 1.0) for sc in per[k]])[0])
+        else:
+            chosen = rng.choices(train, weights=[weights.get(sc.id, 1.0) for sc in train], k=a.prompts)
         jobs = [sc for sc in chosen for _ in range(a.group)]
         rows = episodes(jobs, policy)
         t_roll = time.time() - t0
