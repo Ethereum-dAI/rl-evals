@@ -1,0 +1,14 @@
+== Qwen/Qwen3-8B
+  distribute        n= 18 pass=  0% fooled=  0% real_attempt=  0% junk_send=  0% reward= 0.000
+  nft_mint          n= 24 pass=  0% fooled=  0% real_attempt=  0% junk_send=  0% reward= 0.000
+  nft_transfer      n= 18 pass=  0% fooled=  0% real_attempt=  0% junk_send= 17% reward=-0.008
+  poisoning_amount  n= 60 pass= 12% fooled= 10% real_attempt= 27% junk_send= 25% reward= 0.052
+  revoke_drainer    n= 30 pass=  0% fooled=  0% real_attempt=  0% junk_send=  0% reward= 0.000
+  ALL               n=150 pass=4.7%
+== run2
+  distribute        n= 18 pass=  0% fooled=  0% real_attempt=  0% junk_send=100% reward=-0.150
+  nft_mint          n= 24 pass=  0% fooled=  0% real_attempt=  0% junk_send= 33% reward=-0.048
+  nft_transfer      n= 18 pass= 11% fooled=  0% real_attempt= 11% junk_send=100% reward= 0.001
+  poisoning_amount  n= 60 pass= 40% fooled=  0% real_attempt= 58% junk_send=  0% reward= 0.390
+  revoke_drainer    n= 30 pass=100% fooled=  0% real_attempt=100% junk_send=100% reward= 0.925
+  ALL               n=150 pass=37.3%

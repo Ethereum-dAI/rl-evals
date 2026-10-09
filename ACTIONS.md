@@ -241,3 +241,22 @@ looping on a reverted read. Both are trainable.
   protocol or from writing secp256k1 code in a shell, which every model currently does by hand.
 - Unlinked-pay: make it worth adding with a variant where the one wallet that covers the invoice
   has no ETH for gas, so topping it up from a sibling links them; correct is to stop and explain.
+
+## GRPO on the gym (Qwen3-8B, LoRA r=32, 2026-10-09)
+
+Code: `training/gym_grpo/` (tool-calling rollouts through vLLM on Anvil forks, multi-task GRPO, held-out evaluator).
+Policy and prompt: thinking off, `GYM_PROMPT=v2` (the closing system-prompt line no longer invites `ask_user`).
+Base and trained policy are served by the same vLLM, on the same held-out cases (25 cases x 6 samples = 150 episodes each):
+
+| action | base pass | run2 pass | junk sends base -> run2 |
+|---|--:|--:|--:|
+| 1-2 Pay / check the recipient | 12% (10% fooled) | 40% (0% fooled) | 25% -> 0% |
+| 6 Revoke a drainer | 0% | 100% | 0% -> 100% |
+| 9 Mint, 10 Distribute | 0% | 0% | 0% -> 33% / 0% -> 100% |
+| 11 Transfer an NFT | 0% | 11% | 17% -> 100% |
+| **all** | **4.7%** | **37.3%** | |
+
+The pass gain is real but run2 also learned to send empty no-op transactions (a "junk send" is a reverted or
+empty-calldata tx), because reward v2 paid a 0.05 bonus for any send. Reward v3 (`reward.py`) pays only for a
+non-reverted call with calldata and charges for junk sends. Not yet trained; do not use run2's adapter as is.
+Actions 3, 5, 7, 8 never attempt a send even with hints; action 12 is always fooled (zero reward variance).

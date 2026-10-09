@@ -72,6 +72,7 @@ def main() -> None:
     ap.add_argument("--eval-k", type=int, default=2)
     ap.add_argument("--time-limit-min", type=float, default=90, help="hard stop: the pod bills by the hour")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--unsloth", action="store_true", help="load the trainable copy with Unsloth: 4-bit base (QLoRA), its kernels and gradient checkpointing; vLLM still serves bf16")
     ap.add_argument("--skip-initial-eval", action="store_true", help="the base policy was already measured")
     a = ap.parse_args()
 
@@ -86,12 +87,19 @@ def main() -> None:
     print(f"{len(train)} training scenarios, {len(held)} held-out", flush=True)
 
     tok = AutoTokenizer.from_pretrained(a.model)
-    from peft import LoraConfig, get_peft_model
-    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16, attn_implementation="sdpa").cuda()
-    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    model.enable_input_require_grads()
-    model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
-                                             target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
+    targets = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    if a.unsloth:
+        # Unsloth must be imported before transformers/peft are used so its patches apply (see the Unsloth GRPO guide).
+        from unsloth import FastLanguageModel
+        model, _ = FastLanguageModel.from_pretrained(a.model, max_seq_length=a.max_len, load_in_4bit=True, dtype=torch.bfloat16)
+        model = FastLanguageModel.get_peft_model(model, r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.0, bias="none",
+                                                 target_modules=targets, use_gradient_checkpointing="unsloth", random_state=a.seed)
+    else:
+        from peft import LoraConfig, get_peft_model
+        model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16, attn_implementation="sdpa").cuda()
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+        model.enable_input_require_grads()
+        model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.0, task_type="CAUSAL_LM", target_modules=targets))
     model.train()
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr, weight_decay=0.0)
     client = OpenAI(base_url=a.vllm_url, api_key="x", timeout=300, max_retries=2)
