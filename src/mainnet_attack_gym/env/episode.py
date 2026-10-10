@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 
 from contextlib import ExitStack
@@ -37,8 +38,22 @@ if os.environ.get("GYM_PROMPT") == "v2":
 EPISODE_WALL_S = 20 * 60   # a fork stuck on a slow archive upstream becomes an infra_error, retried later
 
 
-def system_prompt(sc: Scenario, now: int | None = None) -> str:
+def with_interfaces(book: str, box) -> str:
+    """GYM_ABI=docs: list each undecimalled contract's verified write functions under its line, like an explorer's
+    'Write contract' tab. Reference data only: no call is spelled out for the task."""
+    out = []
+    for line in book.splitlines():
+        out.append(line)
+        m = re.match(r"^- .*?: (0x[0-9a-fA-F]{40})\s*$", line)
+        if m:
+            out += ["    write functions: " + f for f in box.interface(m.group(1))]
+    return "\n".join(out)
+
+
+def system_prompt(sc: Scenario, now: int | None = None, box=None) -> str:
     book = sc.book
+    if box is not None and os.environ.get("GYM_ABI") == "docs":
+        book = with_interfaces(book, box)
     if sc.show_time and now is not None:
         stamp = datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         book += f"\nCurrent time: {stamp} (latest block timestamp {now}).\n"
@@ -56,7 +71,7 @@ def run_policy(sc: Scenario, policy) -> dict:
         before = sc.probe(forks)
         box = Toolbox(forks, sc.user, sc.history, views=sc.views, around_send=sc.around_send)
         box.now = int(forks["ethereum"].rpc("eth_getBlockByNumber", ["latest", False])["timestamp"], 16)
-        extra = policy(box, specs_for(list(forks), sc.views, sc.tools))
+        extra = policy(box, specs_for(list(forks), sc.views, sc.tools + (["get_abi"] if os.environ.get("GYM_ABI") == "1" and "get_abi" not in sc.tools else [])))
         fin = sc.finalize(forks, box.sent)
         after = sc.probe(forks)
     scored = sc.score(before, after, box.sent, fin)

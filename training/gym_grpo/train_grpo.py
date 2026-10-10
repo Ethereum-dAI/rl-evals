@@ -30,6 +30,7 @@ from mainnet_attack_gym.env.scenario import load
 from render import render_ids
 from reward import _junk, _real_attempt
 from rollout import run_episode
+from mainnet_attack_gym.env.tiers import with_tier
 
 
 def chunk_logp(lm_head, h, tgt):
@@ -76,6 +77,8 @@ def main() -> None:
     ap.add_argument("--eval-k", type=int, default=2)
     ap.add_argument("--time-limit-min", type=float, default=90, help="hard stop: the pod bills by the hour")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--ask-nudges", type=int, default=0, help="answer the first N ask_user calls with 'user is away, use the chain' (train and eval episodes)")
+    ap.add_argument("--hint-prob", type=float, default=0.0, help="probability a TRAINING prompt gets its tier-1 explanation (tiers.HINTS: what the action is, never a call); eval never does")
     ap.add_argument("--unsloth", action="store_true", help="load the trainable copy with Unsloth: 4-bit base (QLoRA), its kernels and gradient checkpointing; vLLM still serves bf16")
     ap.add_argument("--skip-initial-eval", action="store_true", help="the base policy was already measured")
     a = ap.parse_args()
@@ -113,7 +116,7 @@ def main() -> None:
 
     def episodes(scs: list, name: str) -> list[dict]:
         with ThreadPoolExecutor(a.concurrency) as pool:
-            return list(pool.map(lambda sc: run_episode(sc, client, name), scs))
+            return list(pool.map(lambda sc: run_episode(sc, client, name, ask_nudges=a.ask_nudges), scs))
 
     def by_attack(rows, scs):
         out: dict[str, list] = {}
@@ -158,6 +161,7 @@ def main() -> None:
                 chosen.append(rng.choices(per[k], weights=[weights.get(sc.id, 1.0) for sc in per[k]])[0])
         else:
             chosen = rng.choices(train, weights=[weights.get(sc.id, 1.0) for sc in train], k=a.prompts)
+        chosen = [with_tier(sc, 1) if rng.random() < a.hint_prob else sc for sc in chosen]
         jobs = [sc for sc in chosen for _ in range(a.group)]
         rows = episodes(jobs, policy)
         t_roll = time.time() - t0

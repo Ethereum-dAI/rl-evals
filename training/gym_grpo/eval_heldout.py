@@ -30,13 +30,14 @@ ap.add_argument("--heldout-frac", type=float, default=0.25)
 ap.add_argument("--concurrency", type=int, default=32)
 ap.add_argument("--url", default="http://localhost:8000/v1")
 ap.add_argument("--out", required=True)
+ap.add_argument("--nudges", type=int, default=0)
 a = ap.parse_args()
 
 held = [sc for spec in a.pools for sc in load(*spec.split(":")) if is_heldout(sc.id, a.heldout_frac)]
 client = OpenAI(base_url=a.url, api_key="x", timeout=300, max_retries=2)
 jobs = [(m, sc) for m in a.models for sc in held for _ in range(a.k)]
 with ThreadPoolExecutor(a.concurrency) as ex:
-    rows = list(ex.map(lambda j: {"model": j[0], **run_episode(j[1], client, j[0])}, jobs))
+    rows = list(ex.map(lambda j: {"model": j[0], **run_episode(j[1], client, j[0], ask_nudges=a.nudges)}, jobs))
 with open(a.out, "w") as f:
     for r in rows:
         f.write(json.dumps({k: v for k, v in r.items() if k != "specs"}, default=str) + "\n")

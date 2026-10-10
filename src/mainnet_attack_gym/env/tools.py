@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 
 from eth_abi import decode, encode
@@ -43,6 +44,9 @@ OPTIONAL = {
     "abi_decode": _fn("abi_decode", "Decode ABI-encoded bytes, e.g. calldata after the 4-byte selector, "
                       "with types like ['(uint256,address)','bytes[]'].",
                       {"types": {"type": "array", "items": {"type": "string"}}, "data": _s("hex")}, ["types", "data"]),
+    "get_abi": _fn("get_abi", "The verified ABI of a contract, like an explorer's 'contract' tab: the functions it "
+                   "exposes with parameter names and types (a proxy's implementation is followed).",
+                   {"address": _s("0x contract address")}, ["address"]),
 }
 
 _ARG_TYPES = re.compile(r"^\w+\((.*)\)$")
@@ -108,6 +112,45 @@ def encode_call(signature: str, args: list) -> str:
     return "0x" + (selector(signature.replace(" ", "")) + encode(ts, vals)).hex()
 
 
+_ABI_CACHE: dict[str, list] = {}
+_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"   # EIP-1967 implementation
+
+
+def _sourcify_abi(address: str) -> list:
+    import urllib.request
+    if address not in _ABI_CACHE:
+        url = f"https://sourcify.dev/server/v2/contract/1/{address}?fields=abi"
+        with urllib.request.urlopen(url, timeout=15) as r:
+            _ABI_CACHE[address] = json.load(r).get("abi") or []
+    return _ABI_CACHE[address]
+
+
+def _ty(i: dict) -> str:
+    """Parameter type with tuple fields spelled out: '(address tokenIn,uint24 fee)'."""
+    t = i["type"]
+    if t.startswith("tuple"):
+        return "(" + ",".join(_ty(c) + (" " + c["name"] if c.get("name") else "") for c in i["components"]) + ")" + t[5:]
+    return t
+
+
+def _canon(i: dict) -> str:
+    t = i["type"]
+    return "(" + ",".join(_canon(c) for c in i["components"]) + ")" + t[5:] if t.startswith("tuple") else t
+
+
+def render_abi(abi: list) -> list[str]:
+    out = []
+    for f in abi:
+        if f.get("type") != "function":
+            continue
+        ins = ",".join(_ty(i) + (" " + i["name"] if i.get("name") else "") for i in f["inputs"])
+        canon = f["name"] + "(" + ",".join(_canon(i) for i in f["inputs"]) + ")"
+        outs = ",".join(_ty(o) for o in f.get("outputs", []))
+        out.append(f"{canon}  [{f['name']}({ins})"
+                   + (f" returns ({outs})" if outs else "") + f" {f.get('stateMutability', '')}]")
+    return out
+
+
 class Toolbox:
     """Tools bound to the episode's forks. `forks` maps chain name -> Fork; the first is the one
     the user's wallet signs on. A scenario may wrap sends (`around_send`, e.g. an MEV bot reacting
@@ -119,6 +162,7 @@ class Toolbox:
         self.fork = next(iter(forks.values()))
         self.views = views or {}
         self.around_send = around_send
+        self._seen: set = set()
         self.sent: list[dict] = []
         self.asked: str | None = None
 
@@ -132,11 +176,21 @@ class Toolbox:
         if isinstance(args.get("data"), int) and not isinstance(args["data"], bool):
             h = format(args["data"], "x")
             args["data"] = "0x" + ("0" * (len(h) % 2)) + h
+        key = (name, json.dumps(args, sort_keys=True, default=str))
+        if os.environ.get("GYM_TOOLFB") == "1" and name in ("read_contract", "abi_encode", "get_abi") and key in self._seen:
+            return json.dumps({"error": "You already made this exact call and it failed; repeating it returns the same "
+                                        "result. Change the signature or arguments, or use a different tool."})
+        self._seen.add(key)
         try:
             fn = (lambda **a: self.views[name][1]) if name in self.views else getattr(self, "_" + name)
             return json.dumps(fn(**(args or {})), default=str)
         except Exception as e:  # noqa: BLE001 — tool errors go back to the agent, like a real RPC
-            return json.dumps({"error": f"{type(e).__name__}: {e}"})
+            msg = f"{type(e).__name__}: {e}"
+            if os.environ.get("GYM_TOOLFB") == "1" and name == "read_contract" and "revert" in msg:
+                msg += (" (read_contract is a read-only eth_call: it cannot change state, and a function that moves "
+                        "funds or mints reverts when simulated this way. To act on the chain, build calldata with "
+                        "abi_encode and broadcast it with send_transaction.)")
+            return json.dumps({"error": msg})
 
     def _on(self, chain):
         if chain in (None, "", "ethereum", "mainnet"):
@@ -166,6 +220,24 @@ class Toolbox:
         return {"from": tx["from"], "to": tx["to"], "value": str(int(tx["value"], 16)), "input": tx["input"],
                 "blockNumber": int(tx["blockNumber"], 16), "status": int(rc["status"], 16) if rc else None,
                 "logs": [{"address": l["address"], "topics": l["topics"], "data": l["data"]} for l in (rc or {}).get("logs", [])]}
+
+    def _get_abi(self, address, chain=None):
+        f, addr = self._on(chain), address.lower()
+        abi = list(_sourcify_abi(addr))
+        slot = f.rpc("eth_getStorageAt", [addr, _IMPL_SLOT, "latest"])
+        impl = "0x" + slot[-40:] if slot and int(slot, 16) else None
+        if impl:
+            abi += _sourcify_abi(impl)
+        fns = list(dict.fromkeys(render_abi(abi)))
+        return {"functions": fns[:90]} if fns else {"error": "no verified ABI for this address"}
+
+    def interface(self, address: str, cap: int = 30) -> list[str]:
+        """State-changing functions of a verified contract (proxy followed), for the system prompt's contract list."""
+        try:
+            fns = [f for f in self._get_abi(address).get("functions", []) if not f.rstrip("]").endswith(("view", "pure"))]
+        except Exception:  # noqa: BLE001 — docs are a convenience; a Sourcify hiccup must not fail the episode
+            return []
+        return [f.replace("  [", "   i.e. ", 1).rstrip("]") for f in fns[:cap]]
 
     def _abi_decode(self, types, data):
         return {"result": _jsonable(list(decode(types, bytes.fromhex(data[2:] if data.startswith("0x") else data))))}

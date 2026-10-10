@@ -275,3 +275,24 @@ junk sends (reverted or empty-calldata transactions). Held-out set = 98 episodes
 Run2's 37% did not reproduce under v3: that gain depended on junk sends. Run3c lost it because the variants crowded the learnable actions out of the
 batch (revoke ~0.35 prompts/step vs ~0.9 in run2); run4 fixes that with `--action-weights`. Variants (140, gold-verified) exist for distribute,
 nft_transfer and bridge_base only; the other actions' verifiers are tied to a real on-chain event.
+
+## Why the zero-signal actions stay at zero for Qwen3-8B (2026-10-10 probes)
+
+Base Qwen3-8B (thinking off, v2 prompt, vLLM on an L40S), 8 episodes per action on swap, bridge_base, bridge_exit,
+lp_mint, nft_mint, distribute. Every setting below left swap, bridge, exit, LP and mint at **0 real attempts**:
+
+| setting | result |
+|---|---|
+| baseline | 48/48 no_action except 2 wrong sends on distribute |
+| first `ask_user` answered "user is away" (`--ask-nudges`) | no change; the model loops instead of asking |
+| `get_abi` tool (`GYM_ABI=1`, Sourcify, proxies followed) | never called |
+| verified write-function signatures in the prompt's contract list (`GYM_ABI=docs`) | ignored; model invents `bridgeETHTo` |
+| tier-1 explanation hint | no change |
+| tool feedback (`GYM_TOOLFB=1`: read_contract revert says "read-only, use abi_encode + send_transaction"; exact repeats rejected) | 4/8 bridge_exit now send (reverted), 1/8 distribute real attempt |
+
+Failure mode: the model runs state-changing functions through the read-only `read_contract`, repeats the same failing
+call up to the 24-step limit, and never calls `send_transaction`. This is a capability limit of the 8B in non-thinking
+mode, not a prompt gap, so the next step is Qwen3-14B (Unsloth, A100 80GB: vLLM bf16 14B + 4-bit trainer does not fit
+on a 46 GB L40S). OpenRouter retired `qwen/qwen3-8b` on 2026-10-09 and its 14B thinks even with reasoning disabled, so
+probes must run on a pod. `scripts/probe_nudge.py` is the probe (`PROBE_URL`, `PROBE_MODEL`, `PROBE_TIER`).
+`training/gym_grpo/run5.sh` is the untested all-actions launch script.
