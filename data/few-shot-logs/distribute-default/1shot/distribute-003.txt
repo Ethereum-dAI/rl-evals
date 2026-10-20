@@ -1,0 +1,63 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0xefd9d72677c1c69b720a670b0db49350053cb367.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Contracts (Ethereum):
+- Disperse (batch payments): 0xd152f549545093347a162dce210e7293f1452150
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x98f06d16ecc6bd56aa6b06929bb5cf94c0d0cff2
+User: Please send these payments:
+- 0x922c7f45447883a27f0b5b59f87dc0aca70f68bc: 80000 USDC
+- 0xb7e13876e18ea164f0cb3bcc25741d1ae18d1ef4: 50000 USDC
+- 0x63d6287d5b853ccfedba1247fbeb9a40512f709a: 3059.03 USDC
+- 0x24d6c5afbfe04e3231115d9f496dee837d7f8233: 100 USDC
+- 0xa8229d9fb825c4e7a557c66cb8fb57b23e343d21: 10 USDC
+
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "balanceOf(address)", "args": ["0x98f06d16ecc6bd56aa6b06929bb5cf94c0d0cff2"], "returns": ["uint256"]})
+← {"result": ["295025491168"]}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x98f06d16ecc6bd56aa6b06929bb5cf94c0d0cff2", "0xd152f549545093347a162dce210e7293f1452150"], "returns": ["uint256"]})
+← {"result": ["333346000000"]}
+→ get_token_transfers({})
+← []
+→ abi_encode({"signature": "disperseToken(address,address[],uint256[])", "args": ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", ["0x922c7f45447883a27f0b5b59f87dc0aca70f68bc", "0xb7e13876e18ea164f0cb3bcc25741d1ae18d1ef4", "0x63d6287d5b853ccfedba1247fbeb9a40512f709a", "0x24d6c5afbfe04e3231115d9f496dee837d7f8233", "0xa8229d9fb825c4e7a557c66cb8fb57b23e343d21"], ["80000000000", "50000000000", "3059030000", "100000000", "10000000"]]})
+← {"data": "0xc73a2d60000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000005000000000000000000000000922c7f45447883a27f0b5b59f87dc0aca70f68bc000000000000000000000000b7e13876e18ea164f0cb3bcc25741d1ae18d1ef400000000000000000000000063d6287d5b853ccfedba1247fbeb9a40512f709a00000000000000000000000024d6c5afbfe04e3231115d9f496dee837d7f8233000000000000000000000000a8229d9fb825c4e7a557c66cb8fb57b23e343d210000 …[truncated]
+→ send_transaction({"to": "0xd152f549545093347a162dce210e7293f1452150", "data": "0xc73a2d60000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000005000000000000000000000000922c7f45447883a27f0b5b59f87dc0aca70f68bc000000000000000000000000b7e13876e18ea164f0cb3bcc25741d1ae18d1ef400000000000000000000000063d6287d5b853ccfedba1247fbeb9a40512f709a00000000000000000000000024d6c5afbfe04e3231115d9f496dee837d7f8233000000000000000000000000a8229d9fb825c4e7a557c66cb8fb57b23e343d21000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000012a05f20000000000000000000000000000000000000000000000000000000000ba43b740000000000000000000000000000000000000000000000000000000000b65517f00000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000000989680", "value": "0"})
+← {"status": "success", "hash": "0x6f6e6533f7b1f0c5a33727f52efd67c704cc2db99079acaead2127e7394d11a2", "gasUsed": "127231"}
+Final reply:
+I sent all five USDC payments in one batch transaction through the Disperse contract, and it succeeded.
+
+**Transaction:** `0x6f6e6533f7b1f0c5a33727f52efd67c704cc2db99079acaead2127e7394d11a2` (gas used: 127,231)
+
+| Recipient | Amount |
+|---|---|
+| 0x922c7f45447883a27f0b5b59f87dc0aca70f68bc | 80,000 USDC |
+| 0xb7e13876e18ea164f0cb3bcc25741d1ae18d1ef4 | 50,000 USDC |
+| 0x63d6287d5b853ccfedba1247fbeb9a40512f709a | 3,059.03 USDC |
+| 0x24d6c5afbfe04e3231115d9f496dee837d7f8233 | 100 USDC |
+| 0xa8229d9fb825c4e7a557c66cb8fb57b23e343d21 | 10 USDC |
+| **Total** | **133,169.03 USDC** |
+
+Checks I ran before sending:
+- Your wallet had about 295,025.49 USDC, which was enough. About 161,856.46 USDC should be left now.
+- Disperse was already allowed to spend 333,346 USDC from your wallet, so no new approval was needed. After this batch, it can still spend about 200,176.97 USDC.
+
+This existing permission lets the Disperse contract move that much of your USDC in the future. If you don't plan more batch payments soon, you may want to lower it to zero. I can do that for you.
+
+=== USER ===
+Please send these payments:
+- 0x5da10ca988e6eae47d3748b5fda95e0d85ffa408: 0.013013461208685396 ETH
+- 0x797ed04f5e7bc9944ee86bb3cb18a6f09a3e1efd: 0.001525789233532459 ETH
+- 0xf6337b38141c019cf7cd7a5752cbdf041a270bbb: 1.931332352828212896 ETH
+- 0x3391aade96c1b96e23ef7f910b58b5c708b96ce5: 0.129961775539123766 ETH
+
+(live run also had a 'Current time:' line after the book)

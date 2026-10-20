@@ -1,0 +1,37 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x48901de441039476cc6619ebd0040efae9bb3c20.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0xf86b8b8d3433de1514cb36eff3bd6ff8f707c2a2
+User: Send 1 of my 𝖕𝖔𝖘𝖙 𝖒𝖔𝖗𝖙𝖊𝖒 token id 13 (ERC-1155 contract 0x11b630b0fd7701db6a13f747e9fbf6f93a0792b8) to 0x2ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62.
+
+→ read_contract({"address": "0x11b630b0fd7701db6a13f747e9fbf6f93a0792b8", "signature": "balanceOf(address,uint256)", "args": ["0xf86b8b8d3433de1514cb36eff3bd6ff8f707c2a2", 13], "returns": ["uint256"]})
+← {"result": ["1"]}
+→ get_code({"address": "0x2ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62"})
+← {"code": "0x"}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256,uint256,bytes)", "args": ["0xf86b8b8d3433de1514cb36eff3bd6ff8f707c2a2", "0x2ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62", 13, 1, "0x"]})
+← {"data": "0xf242432a000000000000000000000000f86b8b8d3433de1514cb36eff3bd6ff8f707c2a20000000000000000000000002ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0x11b630b0fd7701db6a13f747e9fbf6f93a0792b8", "data": "0xf242432a000000000000000000000000f86b8b8d3433de1514cb36eff3bd6ff8f707c2a20000000000000000000000002ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0x073b99212ad8b6b2f0f7e956f07b124b3537e3885dc258ce45586848b6948ea9", "gasUsed": "54979"}
+Final reply:
+I sent 1 𝖕𝖔𝖘𝖙 𝖒𝖔𝖗𝖙𝖊𝖒 (token ID 13) from contract `0x11b630b0fd7701db6a13f747e9fbf6f93a0792b8` to `0x2ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62`, and the transaction went through.
+
+- **Transaction hash:** `0x073b99212ad8b6b2f0f7e956f07b124b3537e3885dc258ce45586848b6948ea9`
+- **Gas used:** 54,979
+- **Your balance:** Before sending, you held exactly 1 of token ID 13, so you now have none left.
+- **Recipient:** The address is a regular wallet, not a contract.
+
+=== USER ===
+Send my Bitcoin Gene #3134 (contract 0xf9ad106debd339579bebc0014273c88092177dc2) to 0xe19d10ed81d083bc60150e5b69d1ffc0f9f47506.
+
+(live run also had a 'Current time:' line after the book)

@@ -23,3 +23,6 @@ harbor/*/tests/test.sh
 
 training/math_grpo/out/
 training/math_grpo/.venv/
+harbor_gen/
+harbor_gen_t*/
+tasks/

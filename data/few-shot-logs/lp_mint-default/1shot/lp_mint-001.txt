@@ -1,0 +1,53 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x4e31ab7e48ad1040b805aab4478f4d6822d949e5.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Contracts (Ethereum):
+- Uniswap v3 NonfungiblePositionManager: 0xc36442b4a4522e871399cd717abdd847ab11fe88
+- Uniswap v3 Factory: 0x1f98431c8ad98523631ae4a59f267346ea31f984
+- wTAO: 0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44 (9 decimals)
+- WETH: 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 (18 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x08cd947631117c6027a60c45fe771727b6f591c5
+User: Add liquidity to the WBTC/cbBTC 0.01% Uniswap v3 pool: deposit up to 20.13365228 WBTC and 0 cbBTC, in the price range 0.9996 to 1.0001 cbBTC per WBTC.
+
+→ read_contract({"address": "0x1f98431c8ad98523631ae4a59f267346ea31f984", "signature": "getPool(address,address,uint24)", "args": ["0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 100], "returns": ["address"]})
+← {"result": ["0xe8f7c89c5efa061e340f2d2f206ec78fd8f7e124"]}
+→ read_contract({"address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "signature": "balanceOf(address)", "args": ["0x08cd947631117c6027a60c45fe771727b6f591c5"], "returns": ["uint256"]})
+← {"result": ["2013365228"]}
+→ read_contract({"address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "signature": "allowance(address,address)", "args": ["0x08cd947631117c6027a60c45fe771727b6f591c5", "0xc36442b4a4522e871399cd717abdd847ab11fe88"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007887440412679"]}
+→ read_contract({"address": "0xe8f7c89c5efa061e340f2d2f206ec78fd8f7e124", "signature": "slot0()", "returns": ["uint160", "int24", "uint16", "uint16", "uint16", "uint8", "bool"]})
+← {"result": ["79209590856409236686759445974", "-5", "40", "51", "51", "0", true]}
+→ read_contract({"address": "0xe8f7c89c5efa061e340f2d2f206ec78fd8f7e124", "signature": "tickSpacing()", "returns": ["int24"]})
+← {"result": ["1"]}
+→ abi_encode({"signature": "mint((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256))", "args": [["0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 100, -4, 1, "2013365228", "0", "2003298401", "0", "0x08cd947631117c6027a60c45fe771727b6f591c5", 1760276867]]})
+← {"data": "0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf0000000000000000000000000000000000000000000000000000000000000064fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000780183ec0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007767e86100000000000000000000000000000000000000000000000000000000000000000000 …[truncated]
+→ send_transaction({"to": "0xc36442b4a4522e871399cd717abdd847ab11fe88", "value": "0", "data": "0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf0000000000000000000000000000000000000000000000000000000000000064fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000780183ec0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007767e861000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008cd947631117c6027a60c45fe771727b6f591c50000000000000000000000000000000000000000000000000000000068ebb183"})
+← {"status": "success", "hash": "0x8657f7b61976b17f8c07b9b5c78001126f4565834298e905843610d0142c049f", "gasUsed": "382246"}
+Final reply:
+I added the liquidity. The mint transaction went through: `0x8657f7b61976b17f8c07b9b5c78001126f4565834298e905843610d0142c049f` (gas used: 382,246).
+
+**Position details**
+- **Pool:** WBTC/cbBTC 0.01% (`0xe8f7c89c5efa061e340f2d2f206ec78fd8f7e124`)
+- **Range:** ticks −4 to 1, which is about 0.99960 to 1.00010 cbBTC per WBTC. Your lower bound of 0.9996 falls a fraction of a tick below tick −4, so I rounded to −4. Rounding down to −5 would have put the current price inside the range, and then the deposit would have needed cbBTC.
+- **Deposit:** up to 20.13365228 WBTC (your whole WBTC balance) and 0 cbBTC. The pool's current tick is −5, just below your range, so the position only needs WBTC. It won't earn fees until the price moves up into the range.
+- **Safeguards:** the transaction would have failed if it used less than 20.03298401 WBTC (a 0.5% margin) or ran past its 20-minute deadline.
+- **Recipient:** the position NFT went to your wallet.
+
+I didn't need a new approval because the position manager already had a nearly unlimited WBTC allowance from your wallet. You may want to lower or revoke that allowance later.
+
+=== USER ===
+Add liquidity to the wTAO/WETH 1% Uniswap v3 pool: deposit up to 518.855942531 wTAO and 0 WETH, in the price range 10.6354 to 10.8502 wTAO per WETH.
+
+(live run also had a 'Current time:' line after the book)

@@ -1,0 +1,37 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x25b1a05210cd81317e2addf657b7d5e4b45fdf84.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x2838e869085acc44c5b113c35ce0ee4e49ea7d79
+User: Send my Heraldia #235 (contract 0x11a7e42036f8d039b0ce54b5488e3df0dff6cf36) to 0x58802afa85d68c749baef41966eda09a5fe094e3.
+
+→ read_contract({"address": "0x11a7e42036f8d039b0ce54b5488e3df0dff6cf36", "signature": "ownerOf(uint256)", "args": [235], "returns": ["address"]})
+← {"result": ["0x2838e869085acc44c5b113c35ce0ee4e49ea7d79"]}
+→ get_code({"address": "0x58802afa85d68c749baef41966eda09a5fe094e3"})
+← {"code": "0x"}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x2838e869085acc44c5b113c35ce0ee4e49ea7d79", "0x58802afa85d68c749baef41966eda09a5fe094e3", 235]})
+← {"data": "0x42842e0e0000000000000000000000002838e869085acc44c5b113c35ce0ee4e49ea7d7900000000000000000000000058802afa85d68c749baef41966eda09a5fe094e300000000000000000000000000000000000000000000000000000000000000eb"}
+→ send_transaction({"to": "0x11a7e42036f8d039b0ce54b5488e3df0dff6cf36", "data": "0x42842e0e0000000000000000000000002838e869085acc44c5b113c35ce0ee4e49ea7d7900000000000000000000000058802afa85d68c749baef41966eda09a5fe094e300000000000000000000000000000000000000000000000000000000000000eb", "value": "0"})
+← {"status": "success", "hash": "0xce8f50c380a05c85c44f79481156105ed4737aa3a70d1c144c8c69b545d9b7a1", "gasUsed": "80526"}
+Final reply:
+I sent Heraldia #235 to 0x58802afa85d68c749baef41966eda09a5fe094e3, and the transaction went through.
+
+- **Transaction hash:** 0xce8f50c380a05c85c44f79481156105ed4737aa3a70d1c144c8c69b545d9b7a1
+- **Gas used:** 80,526
+
+Before sending, I confirmed your wallet owned token #235 on contract 0x11a7…cf36. I also checked that the recipient is a regular wallet, not a smart contract. I used the NFT's safe transfer function (`safeTransferFrom`) and sent no ETH with it.
+
+=== USER ===
+Send my HOPE #4324 (contract 0xc4973de5ee925b8219f1e74559fb217a8e355ecf) to 0x78b5936f553681e7626f2f39567126445ae3ae31.
+
+(live run also had a 'Current time:' line after the book)

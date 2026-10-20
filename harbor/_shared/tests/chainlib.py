@@ -13,8 +13,8 @@ import time
 import urllib.request
 
 RPC = os.environ.get("ETH_RPC_URL", "http://chain:8545")
-OUT = "/logs/verifier"
-RPCLOG = "/rpclog"
+OUT = os.environ.get("VERIFIER_OUT", "/logs/verifier")
+RPCLOG = os.environ.get("RPCLOG_DIR", "/rpclog")
 
 
 def rpc(method: str, params: list, tries: int = 5):

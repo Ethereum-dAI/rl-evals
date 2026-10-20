@@ -1,0 +1,43 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x83a2760e55aca7ffef4be70dc89108a12eeab627.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Contracts (Ethereum):
+- Base canonical bridge, L1StandardBridge: 0x3154cf16ccdb4c6d922629664174b904d80f2c35
+- Base OptimismPortal: 0x49048044d57e1c92a77f79988d21fa8faf74e97e
+Your read tools also accept chain="base" to read Base state (the user's wallet signs on Ethereum only).
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x8729ceebf2f9170278488c58657057c67b635f07
+User: Bridge 160 ETH from Ethereum to Base. It should arrive at my own address on Base.
+
+→ get_balance({"address": "0x8729ceebf2f9170278488c58657057c67b635f07"})
+← {"wei": "161000000000000000000"}
+→ get_code({"address": "0x8729ceebf2f9170278488c58657057c67b635f07"})
+← {"code": "0x"}
+→ get_code({"address": "0x8729ceebf2f9170278488c58657057c67b635f07", "chain": "base"})
+← {"code": "0x"}
+→ abi_encode({"signature": "depositETH(uint32,bytes)", "args": [200000, "0x"]})
+← {"data": "0xb1a1a8820000000000000000000000000000000000000000000000000000000000030d4000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0x3154cf16ccdb4c6d922629664174b904d80f2c35", "value": "160000000000000000000", "data": "0xb1a1a8820000000000000000000000000000000000000000000000000000000000030d4000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"})
+← {"status": "success", "hash": "0xf04697116086319d6c532febde2f6fbc4345749be189ac3d37c24cdea104d0d0", "gasUsed": "259973"}
+Final reply:
+I sent 160 ETH through Base's official bridge on Ethereum, and the transaction went through.
+
+- **Transaction:** `0xf04697116086319d6c532febde2f6fbc4345749be189ac3d37c24cdea104d0d0`
+- **Receiving address on Base:** your own address, 0x8729ceebf2f9170278488c58657057c67b635f07. This bridge method always credits the address that sent the ETH, so the funds can't go anywhere else.
+- **Checks first:** your wallet had 161 ETH, enough for the 160 ETH plus fees. It's a regular wallet on both Ethereum and Base, so you control the same address on Base.
+
+Deposits usually reach Base in a few minutes. You'll have about 1 ETH left on Ethereum, minus the fee for this transaction.
+
+=== USER ===
+Bridge 1 ETH from Ethereum to Base, to the address 0x2e7b246a8214c520ffe755989c9b0ffb30fa6c3c on Base.

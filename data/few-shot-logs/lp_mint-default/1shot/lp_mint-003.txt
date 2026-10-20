@@ -1,0 +1,53 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0xc216bfa5da000965e820845c32e6fd88db275743.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Contracts (Ethereum):
+- Uniswap v3 NonfungiblePositionManager: 0xc36442b4a4522e871399cd717abdd847ab11fe88
+- Uniswap v3 Factory: 0x1f98431c8ad98523631ae4a59f267346ea31f984
+- WXRP: 0x39fbbabf11738317a448031930706cd3e612e1b9 (18 decimals)
+- WETH: 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 (18 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x4e31ab7e48ad1040b805aab4478f4d6822d949e5
+User: Add liquidity to the wTAO/WETH 1% Uniswap v3 pool: deposit up to 518.855942531 wTAO and 0 WETH, in the price range 10.6354 to 10.8502 wTAO per WETH.
+
+→ read_contract({"address": "0x1f98431c8ad98523631ae4a59f267346ea31f984", "signature": "getPool(address,address,uint24)", "args": ["0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", 10000], "returns": ["address"]})
+← {"result": ["0x433a00819c771b33fa7223a5b3499b24fbcd1bbc"]}
+→ read_contract({"address": "0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44", "signature": "balanceOf(address)", "args": ["0x4e31ab7e48ad1040b805aab4478f4d6822d949e5"], "returns": ["uint256"]})
+← {"result": ["518855942531"]}
+→ read_contract({"address": "0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44", "signature": "allowance(address,address)", "args": ["0x4e31ab7e48ad1040b805aab4478f4d6822d949e5", "0xc36442b4a4522e871399cd717abdd847ab11fe88"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ read_contract({"address": "0x433a00819c771b33fa7223a5b3499b24fbcd1bbc", "signature": "slot0()", "args": [], "returns": ["uint160", "int24", "uint16", "uint16", "uint16", "uint8", "bool"]})
+← {"result": ["758010690373088662160512749078946", "183331", "7", "60", "60", "102", true]}
+→ read_contract({"address": "0x433a00819c771b33fa7223a5b3499b24fbcd1bbc", "signature": "token0()", "args": [], "returns": ["address"]})
+← {"result": ["0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44"]}
+→ abi_encode({"signature": "mint((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256))", "args": [["0x77e06c9eccf2e797fd462a92b6d7642ef85b0a44", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", 10000, 183400, 183600, "518855942531", "0", "0", "0", "0x4e31ab7e48ad1040b805aab4478f4d6822d949e5", 1771617695]]})
+← {"data": "0x8831645600000000000000000000000077e06c9eccf2e797fd462a92b6d7642ef85b0a44000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000002cc68000000000000000000000000000000000000000000000000000000000002cd3000000000000000000000000000000000000000000000000000000078ce3961830000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 …[truncated]
+→ send_transaction({"to": "0xc36442b4a4522e871399cd717abdd847ab11fe88", "data": "0x8831645600000000000000000000000077e06c9eccf2e797fd462a92b6d7642ef85b0a44000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000002cc68000000000000000000000000000000000000000000000000000000000002cd3000000000000000000000000000000000000000000000000000000078ce3961830000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004e31ab7e48ad1040b805aab4478f4d6822d949e5000000000000000000000000000000000000000000000000000000006998bd9f", "value": "0"})
+← {"status": "success", "hash": "0xe5d9a0426606ae15003c5e8ebbf2a3d81deaf579c0b570bd800ae75c778bb8a3", "gasUsed": "320749"}
+Final reply:
+I added 518.855942531 wTAO and 0 WETH to the wTAO/WETH 1% Uniswap v3 pool, and the transaction succeeded.
+
+- **Transaction:** `0xe5d9a0426606ae15003c5e8ebbf2a3d81deaf579c0b570bd800ae75c778bb8a3` (gas used 320,749)
+- **Pool:** `0x433a00819c771b33fa7223a5b3499b24fbcd1bbc`
+- **Price range:** Your range of 10.6354 to 10.8502 wTAO per WETH matches pool ticks 183400 to 183600 exactly. No rounding was needed.
+- **Why only wTAO:** The pool price is about 10.93 wTAO per WETH, just outside your range. A deposit of only wTAO is correct for this range.
+- **Your balance:** This was your entire wTAO balance. The Uniswap contract already had unlimited approval to spend your wTAO, so no separate approval was needed.
+- **Minimums:** I set both minimum amounts to 0. Because WETH was 0, the deposit would have failed rather than gone through at a worse price if the price had moved into your range first.
+
+The position won't earn fees until the price enters your range. Then your wTAO will gradually convert to WETH. I didn't check the new position's NFT ID or the exact amount the pool took after the transaction.
+
+=== USER ===
+Add liquidity to the WXRP/WETH 1% Uniswap v3 pool: deposit up to 4064.56267870981586944 WXRP and 0 WETH, in the price range 1509.65 to 1571.26 WXRP per WETH.
+
+(live run also had a 'Current time:' line after the book)

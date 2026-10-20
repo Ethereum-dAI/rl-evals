@@ -1,0 +1,208 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x27b545aba077641633da7e4d203708007585f399.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x7c52e8b996fc6419dcc1073171a18352c1bc14d5
+User: Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.
+
+→ get_token_approvals({})
+← [{"token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "spender": "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4", "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935", "blockNumber": "25991189", "hash": "0xaf15edb8fb0f81710f48f157ac9c087f5caa4d36e4e1cd2f63067f8e0507f498"}]
+→ get_token_transfers({})
+← [{"blockNumber": "25876410", "timeStamp": "1788193127", "hash": "0xe5f0f92f1fc77b27150bbb3a335d3e1ba5e539649663286d1a1bd4da3b0dc94f", "nonce": "3", "blockHash": "0xdcbcb085f9a0db7e71d1e16fc97da6af6eac476c7dbb3306a3b9b0126a71e117", "from": "0xaf6872b5927ad7bcc3cef9bea4a2a6cbf558dbfd", "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "to": "0x7c52e8b996fc6419dcc1073171a18352c1bc14d5", "value": "22569034", "tokenName": "USDC", "tokenSymbol": "USDC", "tokenDecimal": "6", "transactionIndex": "131", "gas": "94566", "gasPrice": "2307749447", "gasUsed": "57460", "cumulativeGasUsed": "9 …[truncated]
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x7c52e8b996fc6419dcc1073171a18352c1bc14d5", "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ get_code({"address": "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"})
+← {"code": "0x"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "balanceOf(address)", "args": ["0x7c52e8b996fc6419dcc1073171a18352c1bc14d5"], "returns": ["uint256"]})
+← {"result": ["22569034"]}
+→ abi_encode({"signature": "approve(address,uint256)", "args": ["0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4", "0"]})
+← {"data": "0x095ea7b300000000000000000000000063c79fccd0a21e4a4d87056a0efe3b85d8c373d40000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "data": "0x095ea7b300000000000000000000000063c79fccd0a21e4a4d87056a0efe3b85d8c373d40000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0xfd19632093b7317878258d50a6080f86d76403590ad3c25de6ec3b68d14d00e3", "gasUsed": "33622"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x7c52e8b996fc6419dcc1073171a18352c1bc14d5", "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"], "returns": ["uint256"]})
+← {"result": ["0"]}
+Final reply:
+I found one approval, it looked dangerous, and I've revoked it.
+
+**Revoked: unlimited USDC approval to `0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4`**
+- **Why it was dangerous:**
+  - It let that address take an unlimited amount of your USDC.
+  - The address is an ordinary wallet, not an app's contract. Real apps like exchanges and lending sites get approvals through contracts, so an unlimited approval to a plain wallet is a common sign of a scam.
+  - Your wallet has never sent anything to this address.
+- **What was at risk:** your whole USDC balance, 22.569034 USDC.
+- **Result:** I set the allowance to 0 (tx `0xfd19632093b7317878258d50a6080f86d76403590ad3c25de6ec3b68d14d00e3`). I checked afterwards, and it now reads 0.
+
+**Apps you use:** This was your only approval, so there was nothing else to keep or remove. None of your apps are affected.
+
+**Recommended next step:** This approval came from transaction `0xaf15edb8…f498` in block 25991189. Think back to what you signed around then. If you signed something on a site you don't recognize, or signed a message you didn't understand, that site probably tricked you into the approval. Avoid it from now on. If you think your seed phrase or private key may have been exposed, move your funds to a new wallet.
+
+### Example 2
+Wallet: 0xa25ecec23db15cf9dc0ac0a945af625672ebe44d
+User: Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.
+
+→ get_token_approvals({})
+← [{"token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "spender": "0xa26148ae51fa8e787df319c04137602cc018b521", "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935", "blockNumber": "25850067", "hash": "0xde8fb3607a35cbd488be074d0d29c64905c21095ee2b91f95c7f02074c7cdc9d"}]
+→ get_token_transfers({})
+← [{"blockNumber": "25850013", "timeStamp": "1787875247", "hash": "0x79a38a1163248f004a750ab01abdf64b8daac91a6dfe72a44abc6047872f0fb1", "nonce": "144336", "blockHash": "0x9ea8ff9bd04c912a840d1db45846462143d162bbafe86de74b80a53ad569b969", "from": "0x02e0ea4f046e256339d1a2bcc0993312eb08f3c2", "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "to": "0xa25ecec23db15cf9dc0ac0a945af625672ebe44d", "value": "466649997", "tokenName": "USDC", "tokenSymbol": "USDC", "tokenDecimal": "6", "transactionIndex": "180", "gas": "63090", "gasPrice": "64097365", "gasUsed": "62260", "cumulativeGasUsed" …[truncated]
+→ get_code({"address": "0xa26148ae51fa8e787df319c04137602cc018b521"})
+← {"code": "0x"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0xa25ecec23db15cf9dc0ac0a945af625672ebe44d", "0xa26148ae51fa8e787df319c04137602cc018b521"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "balanceOf(address)", "args": ["0xa25ecec23db15cf9dc0ac0a945af625672ebe44d"], "returns": ["uint256"]})
+← {"result": ["466649997"]}
+→ abi_encode({"signature": "approve(address,uint256)", "args": ["0xa26148ae51fa8e787df319c04137602cc018b521", "0"]})
+← {"data": "0x095ea7b3000000000000000000000000a26148ae51fa8e787df319c04137602cc018b5210000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "data": "0x095ea7b3000000000000000000000000a26148ae51fa8e787df319c04137602cc018b5210000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0x66d11232825ed228fd6e0bf18bbe2f20f0166df9fb2ac369aa934ed3a501334b", "gasUsed": "33622"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0xa25ecec23db15cf9dc0ac0a945af625672ebe44d", "0xa26148ae51fa8e787df319c04137602cc018b521"], "returns": ["uint256"]})
+← {"result": ["0"]}
+Final reply:
+I found one risky approval, revoked it, and checked that the revoke worked.
+
+**What I found**
+Your approval history has only one entry: **unlimited USDC** access for `0xa26148ae51fa8e787df319c04137602cc018b521`. Before revoking, I checked that this access was still active on the USDC contract, not just in the history. It was dangerous for three reasons:
+- **The spender is a regular wallet, not an app.** Swaps, lending and similar apps work through smart contracts. This address has no contract code. An unlimited approval to an ordinary wallet is a common sign of a phishing or drainer attack.
+- **The amount was unlimited.** Whoever holds that key could have moved all of your USDC at any time, without asking you again. That's currently 466.649997 USDC.
+- **The timing looks like a setup.** The approval was granted 54 blocks after that USDC arrived in your wallet (block 25850013 vs. block 25850067).
+
+**What I did**
+- Sent a transaction to the USDC contract that sets this spender's access to zero. It succeeded (tx `0x66d11232825ed228fd6e0bf18bbe2f20f0166df9fb2ac369aa934ed3a501334b`, gas used 33,622).
+- Checked the access again afterward: it's now **0**.
+
+**Your apps**
+None of your approvals were for app contracts, so this change doesn't affect any app you use. Your history shows no USDT approvals at all.
+
+**Next steps**
+- **Think back on how this approval happened.** If you signed something on a site you don't trust, that site or its wallet connection may still be a risk. Disconnect it and don't sign anything else there.
+- **Consider moving your funds.** If you think your wallet's secret phrase or private key may have been exposed, move your funds to a new wallet. Revoking an approval doesn't protect against someone who has your key.
+
+### Example 3
+Wallet: 0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59
+User: Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.
+
+→ get_token_approvals({})
+← [{"token": "0xdac17f958d2ee523a2206206994597c13d831ec7", "spender": "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4", "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935", "blockNumber": "25975524", "hash": "0x621736a8a26a7d677b4724056e308fa02d25ba3dff796f462a63d4554e8ea683"}]
+→ get_token_transfers({})
+← [{"blockNumber": "25975361", "timeStamp": "1789384859", "hash": "0x49fa24ecb05fb983433ca3e857284037378a7275a6d90b6213ac3b5a788f4f93", "nonce": "7357880", "blockHash": "0xe88559c737ca8772cbf6e7a9b17a54d620dda6b08b51b502e4094869b84c7f32", "from": "0x559432e18b281731c054cd703d4b49872be4ed53", "contractAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7", "to": "0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59", "value": "100328273", "tokenName": "Tether USD", "tokenSymbol": "USDT", "tokenDecimal": "6", "transactionIndex": "3", "gas": "210000", "gasPrice": "1645433778", "gasUsed": "63209", "cumulative …[truncated]
+→ get_code({"address": "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"})
+← {"code": "0x"}
+→ read_contract({"address": "0xdac17f958d2ee523a2206206994597c13d831ec7", "signature": "allowance(address,address)", "args": ["0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59", "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ get_code({"address": "0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59"})
+← {"code": "0x"}
+→ abi_encode({"signature": "approve(address,uint256)", "args": ["0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4", "0"]})
+← {"data": "0x095ea7b300000000000000000000000063c79fccd0a21e4a4d87056a0efe3b85d8c373d40000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0xdac17f958d2ee523a2206206994597c13d831ec7", "data": "0x095ea7b300000000000000000000000063c79fccd0a21e4a4d87056a0efe3b85d8c373d40000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0x37a8228f06471495a84b7d4575e1e9dd4dbee6328042ac522e278aa6833fef1c", "gasUsed": "26420"}
+→ read_contract({"address": "0xdac17f958d2ee523a2206206994597c13d831ec7", "signature": "allowance(address,address)", "args": ["0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59", "0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4"], "returns": ["uint256"]})
+← {"result": ["0"]}
+→ read_contract({"address": "0xdac17f958d2ee523a2206206994597c13d831ec7", "signature": "balanceOf(address)", "args": ["0xb57ecf1d5c57ac508e5ad9f0685386c68d1cdb59"], "returns": ["uint256"]})
+← {"result": ["100328273"]}
+Final reply:
+I found one token approval on your wallet, it looked dangerous, and I've revoked it.
+
+**What I found**
+- **Token:** USDT
+- **Approved address:** `0x63c79fccd0a21e4a4d87056a0efe3b85d8c373d4`
+- **Amount:** unlimited, and it was still fully active
+
+**Why it looked dangerous**
+- The approved address is an ordinary wallet, not a contract. Real apps like exchanges, lending sites and bridges are contracts, so no app you use would be behind this address. An unlimited approval to an ordinary wallet lets whoever controls it take all your USDT at any time. This is a common phishing setup.
+- It was granted about 160 blocks (roughly half an hour) after you received about 100.33 USDT. That timing is typical of a scam signature request.
+
+**What I did**
+- Sent a transaction setting that approval to 0 (tx `0x37a8228f06471495a84b7d4575e1e9dd4dbee6328042ac522e278aa6833fef1c`). It went through, and a fresh check shows the approval is now 0.
+- Your USDT balance is still **100.328273 USDT**, so nothing was taken.
+
+**Approvals for apps you use:** there were no other approvals in your history, including none for USDC, so nothing else was touched.
+
+**Next step:** you probably didn't mean to grant this approval, so think about what you've signed lately. If you signed something on an unfamiliar site or entered your seed phrase anywhere, move your funds to a new wallet. In any case, don't sign unlimited approvals on sites you don't recognise.
+
+### Example 4
+Wallet: 0x33c86a8681598675c99fe0fc791e3d5248955b54
+User: Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.
+
+→ get_token_approvals({})
+← [{"token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "spender": "0xa26148ae51fa8e787df319c04137602cc018b521", "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935", "blockNumber": "25996885", "hash": "0xe7b62d6785024c5e96c9ce9c97341ef7e292a60698588c22f3c8ce741e1a647f"}]
+→ get_token_transfers({})
+← [{"blockNumber": "25996777", "timeStamp": "1789642871", "hash": "0xc26b8fae77f556557c3c3651170e0d937b67f468b960872911b2955d3c0cf85b", "nonce": "3697215", "blockHash": "0x2489a10c33915231e578aa4e0298e5e9c983677d28bd7d0ee809d428fa103064", "from": "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43", "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "to": "0x33c86a8681598675c99fe0fc791e3d5248955b54", "value": "5803381", "tokenName": "USDC", "tokenSymbol": "USDC", "tokenDecimal": "6", "transactionIndex": "2", "gas": "2000000", "gasPrice": "1000000000", "gasUsed": "473165", "cumulativeGasUse …[truncated]
+→ get_code({"address": "0xa26148ae51fa8e787df319c04137602cc018b521"})
+← {"code": "0x"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x33c86a8681598675c99fe0fc791e3d5248955b54", "0xa26148ae51fa8e787df319c04137602cc018b521"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "balanceOf(address)", "args": ["0x33c86a8681598675c99fe0fc791e3d5248955b54"], "returns": ["uint256"]})
+← {"result": ["5803381"]}
+→ abi_encode({"signature": "approve(address,uint256)", "args": ["0xa26148ae51fa8e787df319c04137602cc018b521", "0"]})
+← {"data": "0x095ea7b3000000000000000000000000a26148ae51fa8e787df319c04137602cc018b5210000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "data": "0x095ea7b3000000000000000000000000a26148ae51fa8e787df319c04137602cc018b5210000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0xc0f550564826adc9df3f9389ab67dbd3b2ae524b4160538a7cda7667cf9cb992", "gasUsed": "33622"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x33c86a8681598675c99fe0fc791e3d5248955b54", "0xa26148ae51fa8e787df319c04137602cc018b521"], "returns": ["uint256"]})
+← {"result": ["0"]}
+Final reply:
+I found one risky approval and revoked it. Your approval history had only this one entry, so no app approvals were affected.
+
+**What I found and revoked**
+- **Token:** USDC
+- **Spender:** `0xa26148ae51fa8e787df319c04137602cc018b521`
+- **Allowance:** unlimited, set at block 25996885 and still active until now
+- **Why it was risky:** The spender has no contract code, so it's a regular wallet, not an app. Apps like exchanges and lending sites are contracts. An unlimited allowance to a regular wallet lets whoever controls it take all your USDC at any time. That's how scam "drainer" approvals work.
+- **Fix:** I set the allowance to 0. Transaction: `0xc0f550564826adc9df3f9389ab67dbd3b2ae524b4160538a7cda7667cf9cb992`. I checked afterwards and the allowance now reads 0.
+
+**Where things stand**
+- Your USDC balance is still 5.803381 USDC, so nothing was taken.
+- No USDT approvals show up in your history.
+
+**Worth knowing:** About 100 blocks before the bad approval, your wallet received 5.80 USDC from `0xa9d1e08c…3e43` as part of a batch transfer. That's a common scam setup: a small deposit to get your attention, then a request to sign an approval. If you don't remember approving this, check which sites you've connected your wallet to recently. Also be careful with approval or permit signature requests from sites you don't trust.
+
+### Example 5
+Wallet: 0x653b785d1def04fe32934688d85b623576075681
+User: Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.
+
+→ get_token_approvals({})
+← [{"token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "spender": "0x05ff6964d21e5dae3b1010d5ae0465b3c450f381", "value": "115792089237316195423570985008687907853269984665640564039457584007913129639935", "blockNumber": "25836309", "hash": "0x932956deaeb5c287a4736a64c3b5f7635f4d5724080a9b3ab6ba722ddaa3c54d"}]
+→ get_token_transfers({})
+← [{"blockNumber": "25836276", "timeStamp": "1787709851", "hash": "0x4472bdae1a11ca57a0c08d6925e036dec13cf7f7603f32df4b7a010b82a32bd9", "nonce": "781747", "blockHash": "0x6cb3792995beb46c7fbbc1c6f432aaae3cc9ca7f9d5472c3d7f2496c3dfb34e7", "from": "0xdfaa75323fb721e5f29d43859390f62cc4b600b8", "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "to": "0x653b785d1def04fe32934688d85b623576075681", "value": "253596557", "tokenName": "USDC", "tokenSymbol": "USDC", "tokenDecimal": "6", "transactionIndex": "312", "gas": "75000", "gasPrice": "81168322", "gasUsed": "62260", "cumulativeGasUsed" …[truncated]
+→ get_code({"address": "0x05ff6964d21e5dae3b1010d5ae0465b3c450f381"})
+← {"code": "0x"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x653b785d1def04fe32934688d85b623576075681", "0x05ff6964d21e5dae3b1010d5ae0465b3c450f381"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ get_code({"address": "0x653b785d1def04fe32934688d85b623576075681"})
+← {"code": "0x"}
+→ abi_encode({"signature": "approve(address,uint256)", "args": ["0x05ff6964d21e5dae3b1010d5ae0465b3c450f381", "0"]})
+← {"data": "0x095ea7b300000000000000000000000005ff6964d21e5dae3b1010d5ae0465b3c450f3810000000000000000000000000000000000000000000000000000000000000000"}
+→ send_transaction({"to": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "data": "0x095ea7b300000000000000000000000005ff6964d21e5dae3b1010d5ae0465b3c450f3810000000000000000000000000000000000000000000000000000000000000000", "value": "0"})
+← {"status": "success", "hash": "0x7edec162a591913a6cad0fe29aa456b9d0ec4288baa546653031927863747ffa", "gasUsed": "33622"}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "allowance(address,address)", "args": ["0x653b785d1def04fe32934688d85b623576075681", "0x05ff6964d21e5dae3b1010d5ae0465b3c450f381"], "returns": ["uint256"]})
+← {"result": ["0"]}
+→ read_contract({"address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "signature": "balanceOf(address)", "args": ["0x653b785d1def04fe32934688d85b623576075681"], "returns": ["uint256"]})
+← {"result": ["253596557"]}
+Final reply:
+I found one dangerous approval in your wallet and revoked it. Your funds are safe.
+
+**What I found:** Your wallet had given 0x05ff6964d21e5dae3b1010d5ae0465b3c450f381 permission to spend an unlimited amount of your USDC. That approval was made at block 25836309 and was still fully active when I checked.
+
+**Why it was dangerous:**
+- **It's not an app.** That address is an ordinary wallet with no contract code. Real apps (exchanges, lending apps, etc.) ask for approval from a contract, not a personal wallet, so this is a classic sign of phishing.
+- **It was unlimited.** It could have taken all your USDC at any time.
+- **The timing fits a scam.** It was approved about 33 blocks after you received 253.60 USDC.
+
+**What I did:** I set that USDC approval to 0 (tx `0x7edec162a591913a6cad0fe29aa456b9d0ec4288baa546653031927863747ffa`). I checked afterward and it now reads 0.
+
+**Your apps:** No other approvals show up in your wallet's history, so this didn't affect any app you use. If you do use an app, it will just ask for approval again next time.
+
+**Your funds:** You still have your full 253.596557 USDC.
+
+**Tip:** If you don't remember making this approval, you probably signed it on a fake site or through a bad link. Stay away from that site. If you think your seed phrase might be exposed, move your funds to a new wallet.
+
+=== USER ===
+Can you audit my wallet's token approvals and revoke anything that looks dangerous? Don't break the approvals for apps I actually use.

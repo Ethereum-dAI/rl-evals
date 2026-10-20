@@ -1,0 +1,58 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0x08cd947631117c6027a60c45fe771727b6f591c5.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Contracts (Ethereum):
+- Uniswap v3 NonfungiblePositionManager: 0xc36442b4a4522e871399cd717abdd847ab11fe88
+- Uniswap v3 Factory: 0x1f98431c8ad98523631ae4a59f267346ea31f984
+- WBTC: 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 (8 decimals)
+- cbBTC: 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf (8 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x67e2fc02c1309e97e358ae62e228db55ba49c6ca
+User: Add liquidity to the WETH/USDT 0.3% Uniswap v3 pool: deposit up to 1.873055303348292372 WETH and 73097.895318 USDT, in the price range 1101.09 to 2416.35 USDT per WETH.
+
+→ read_contract({"address": "0x1f98431c8ad98523631ae4a59f267346ea31f984", "signature": "getPool(address,address,uint24)", "args": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "0xdac17f958d2ee523a2206206994597c13d831ec7", 3000], "returns": ["address"]})
+← {"result": ["0x4e68ccd3e89f51c3074ca5072bbac773960dfa36"]}
+→ read_contract({"address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "signature": "balanceOf(address)", "args": ["0x67e2fc02c1309e97e358ae62e228db55ba49c6ca"], "returns": ["uint256"]})
+← {"result": ["1873055303371886564"]}
+→ read_contract({"address": "0xdac17f958d2ee523a2206206994597c13d831ec7", "signature": "balanceOf(address)", "args": ["0x67e2fc02c1309e97e358ae62e228db55ba49c6ca"], "returns": ["uint256"]})
+← {"result": ["75648988165"]}
+→ get_balance({"address": "0x67e2fc02c1309e97e358ae62e228db55ba49c6ca"})
+← {"wei": "1000000000000000000"}
+→ read_contract({"address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "signature": "allowance(address,address)", "args": ["0x67e2fc02c1309e97e358ae62e228db55ba49c6ca", "0xc36442b4a4522e871399cd717abdd847ab11fe88"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ read_contract({"address": "0xdac17f958d2ee523a2206206994597c13d831ec7", "signature": "allowance(address,address)", "args": ["0x67e2fc02c1309e97e358ae62e228db55ba49c6ca", "0xc36442b4a4522e871399cd717abdd847ab11fe88"], "returns": ["uint256"]})
+← {"result": ["115792089237316195423570985008687907853269984665640564039457584007913129639935"]}
+→ read_contract({"address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36", "signature": "slot0()", "returns": ["uint160", "int24", "uint16", "uint16", "uint16", "uint8", "bool"]})
+← {"result": ["3822073562584075460996412", "-198796", "87", "150", "150", "102", true]}
+→ read_contract({"address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36", "signature": "token0()", "returns": ["address"]})
+← {"result": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"]}
+→ abi_encode({"signature": "mint((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256))", "args": [["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "0xdac17f958d2ee523a2206206994597c13d831ec7", 3000, -206280, -198420, "1873055303348292372", "73097895318", "1863690026831550910", "72732405841", "0x67e2fc02c1309e97e358ae62e228db55ba49c6ca", 1777761839]]})
+← {"data": "0x88316456000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000000000000000000000000000000000000000000bb8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcda38fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcf8ec00000000000000000000000000000000000000000000000019fe6ddfe0bc8b140000000000000000000000000000000000000000000000000000001104f95d9600000000000000000000000000000000000000000000000019dd283484bb99be00000000000000000000000000000000000000000000000000000010ef3070510000 …[truncated]
+→ send_transaction({"to": "0xc36442b4a4522e871399cd717abdd847ab11fe88", "data": "0x88316456000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec70000000000000000000000000000000000000000000000000000000000000bb8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcda38fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcf8ec00000000000000000000000000000000000000000000000019fe6ddfe0bc8b140000000000000000000000000000000000000000000000000000001104f95d9600000000000000000000000000000000000000000000000019dd283484bb99be00000000000000000000000000000000000000000000000000000010ef30705100000000000000000000000067e2fc02c1309e97e358ae62e228db55ba49c6ca0000000000000000000000000000000000000000000000000000000069f67e2f", "value": "0"})
+← {"status": "success", "hash": "0x228515ad8849b05e9563e0fe61b3f25c55d31e17259cd57399d7abd49b08454b", "gasUsed": "429467"}
+Final reply:
+I added the liquidity to the WETH/USDT 0.3% Uniswap v3 pool. The transaction went through: tx `0x228515ad8849b05e9563e0fe61b3f25c55d31e17259cd57399d7abd49b08454b`, gas used 429,467.
+
+- **Pool:** `0x4e68ccd3e89f51c3074ca5072bbac773960dfa36`. When I checked, the price was about 2,327 USDT per WETH, which is inside your range, so the position holds both tokens.
+- **Price range:** 1101.09 to 2416.35 USDT per WETH. Your two prices land exactly on valid tick-grid points, so the range is exactly what you asked for.
+- **Amounts:** up to 1.873055303348292372 WETH and 73,097.895318 USDT. By my estimate these amounts are almost exactly the ratio the pool needs at the current price, so close to all of both should have gone in. I haven't checked the confirmed amounts from the transaction.
+- **Price protection:** the deposit would have been rejected if the price had moved more than about 0.5%. That means at least 1.86369 WETH and 72,732.405841 USDT. It also had a 20-minute deadline.
+- **Approvals:** the Uniswap position manager already had unlimited approval for both WETH and USDT, so no approval transactions were needed.
+
+Your wallet will receive the position as an NFT. Any unused tokens stay in your wallet. You still have about 1 ETH for gas.
+
+=== USER ===
+Add liquidity to the WBTC/cbBTC 0.01% Uniswap v3 pool: deposit up to 20.13365228 WBTC and 0 cbBTC, in the price range 0.9996 to 1.0001 cbBTC per WBTC.
+
+(live run also had a 'Current time:' line after the book)

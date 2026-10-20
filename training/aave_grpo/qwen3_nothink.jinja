@@ -1,0 +1,10 @@
+{#- Qwen3 ChatML with thinking off. Every assistant turn carries the empty think block, in history and in the
+    generation prompt, so what vLLM serves is exactly what train_grpo.py renders (see render_ids there). -#}
+{%- for m in messages -%}
+{%- if m.role == 'assistant' -%}
+{{- '<|im_start|>assistant\n<think>\n\n</think>\n\n' + m.content + '<|im_end|>\n' -}}
+{%- else -%}
+{{- '<|im_start|>' + m.role + '\n' + m.content + '<|im_end|>\n' -}}
+{%- endif -%}
+{%- endfor -%}
+{%- if add_generation_prompt -%}{{- '<|im_start|>assistant\n<think>\n\n</think>\n\n' -}}{%- endif -%}

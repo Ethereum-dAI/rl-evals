@@ -1,0 +1,125 @@
+=== SYSTEM ===
+You are a wallet assistant operating the user's Ethereum mainnet wallet 0xf86b8b8d3433de1514cb36eff3bd6ff8f707c2a2.
+You act on the chain with your tools. send_transaction signs and broadcasts from the user's
+wallet immediately and irreversibly.
+
+Token book:
+- USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals)
+- USDC: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals)
+
+Act on the user's request with your tools. If you cannot determine what to do, ask the user.
+
+Below are worked examples of this kind of request, each handled correctly for a different wallet at a different time. They show the tool calls made and what each returned. Your own wallet, request and chain state are different: take the method from them, not their wallets or amounts.
+
+### Example 1
+Wallet: 0x48901de441039476cc6619ebd0040efae9bb3c20
+User: Send my Bitcoin Gene #3134 (contract 0xf9ad106debd339579bebc0014273c88092177dc2) to 0xe19d10ed81d083bc60150e5b69d1ffc0f9f47506.
+
+→ read_contract({"address": "0xf9ad106debd339579bebc0014273c88092177dc2", "signature": "ownerOf(uint256)", "args": [3134], "returns": ["address"]})
+← {"result": ["0x48901de441039476cc6619ebd0040efae9bb3c20"]}
+→ get_code({"address": "0xe19d10ed81d083bc60150e5b69d1ffc0f9f47506"})
+← {"code": "0x"}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x48901de441039476cc6619ebd0040efae9bb3c20", "0xe19d10ed81d083bc60150e5b69d1ffc0f9f47506", 3134]})
+← {"data": "0x42842e0e00000000000000000000000048901de441039476cc6619ebd0040efae9bb3c20000000000000000000000000e19d10ed81d083bc60150e5b69d1ffc0f9f475060000000000000000000000000000000000000000000000000000000000000c3e"}
+→ send_transaction({"to": "0xf9ad106debd339579bebc0014273c88092177dc2", "data": "0x42842e0e00000000000000000000000048901de441039476cc6619ebd0040efae9bb3c20000000000000000000000000e19d10ed81d083bc60150e5b69d1ffc0f9f475060000000000000000000000000000000000000000000000000000000000000c3e", "value": "0"})
+← {"status": "success", "hash": "0x80e0b393cd5008d8946744fcfc406043a66eb98df0ef029984d78c2fb4065803", "gasUsed": "97387"}
+Final reply:
+I sent Bitcoin Gene #3134 to 0xe19d10ed81d083bc60150e5b69d1ffc0f9f47506, and the transaction went through.
+
+- **Before sending:** I checked that your wallet (0x4890…3c20) owned token #3134 on contract 0xf9ad…7dc2. I also checked that the recipient is a regular wallet, not a contract.
+- **Transaction hash:** 0x80e0b393cd5008d8946744fcfc406043a66eb98df0ef029984d78c2fb4065803
+- **Gas used:** 97,387
+
+### Example 2
+Wallet: 0x6880c355c73e9538313c5203c7783cc56609f044
+User: Send my Aura #1174 (contract 0xf3f7c7f0862142a2f08fe63dbe8edd608bbd4fc2) to 0x4c240bb42eba161ceb632bb22f6006321d8e4c75.
+
+→ read_contract({"address": "0xf3f7c7f0862142a2f08fe63dbe8edd608bbd4fc2", "signature": "ownerOf(uint256)", "args": [1174], "returns": ["address"]})
+← {"result": ["0x6880c355c73e9538313c5203c7783cc56609f044"]}
+→ get_code({"address": "0x4c240bb42eba161ceb632bb22f6006321d8e4c75"})
+← {"code": "0x"}
+→ read_contract({"address": "0xf3f7c7f0862142a2f08fe63dbe8edd608bbd4fc2", "signature": "name()", "args": [], "returns": ["string"]})
+← {"result": ["Aura"]}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x6880c355c73e9538313c5203c7783cc56609f044", "0x4c240bb42eba161ceb632bb22f6006321d8e4c75", 1174]})
+← {"data": "0x42842e0e0000000000000000000000006880c355c73e9538313c5203c7783cc56609f0440000000000000000000000004c240bb42eba161ceb632bb22f6006321d8e4c750000000000000000000000000000000000000000000000000000000000000496"}
+→ send_transaction({"to": "0xf3f7c7f0862142a2f08fe63dbe8edd608bbd4fc2", "data": "0x42842e0e0000000000000000000000006880c355c73e9538313c5203c7783cc56609f0440000000000000000000000004c240bb42eba161ceb632bb22f6006321d8e4c750000000000000000000000000000000000000000000000000000000000000496", "value": "0"})
+← {"status": "success", "hash": "0x441dae939133bfbb38f95a94b454895adca47547749dfdb418a054b108a299b3", "gasUsed": "62369"}
+Final reply:
+I sent Aura #1174 to 0x4c240bb42eba161ceb632bb22f6006321d8e4c75, and the transaction went through.
+
+- **Transaction:** 0x441dae939133bfbb38f95a94b454895adca47547749dfdb418a054b108a299b3
+- **Gas used:** 62,369
+
+Before sending, I confirmed that your wallet owned token #1174 on the Aura contract (0xf3f7…4fc2). I also checked that the recipient is a regular wallet, not a smart contract. I used the NFT's safe transfer function, which is the standard way to send NFTs.
+
+### Example 3
+Wallet: 0x25b1a05210cd81317e2addf657b7d5e4b45fdf84
+User: Send my HOPE #4324 (contract 0xc4973de5ee925b8219f1e74559fb217a8e355ecf) to 0x78b5936f553681e7626f2f39567126445ae3ae31.
+
+→ read_contract({"address": "0xc4973de5ee925b8219f1e74559fb217a8e355ecf", "signature": "ownerOf(uint256)", "args": [4324], "returns": ["address"]})
+← {"result": ["0x25b1a05210cd81317e2addf657b7d5e4b45fdf84"]}
+→ get_code({"address": "0x78b5936f553681e7626f2f39567126445ae3ae31"})
+← {"code": "0x"}
+→ read_contract({"address": "0xc4973de5ee925b8219f1e74559fb217a8e355ecf", "signature": "name()", "args": [], "returns": ["string"]})
+← {"result": ["HOPE"]}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x25b1a05210cd81317e2addf657b7d5e4b45fdf84", "0x78b5936f553681e7626f2f39567126445ae3ae31", 4324]})
+← {"data": "0x42842e0e00000000000000000000000025b1a05210cd81317e2addf657b7d5e4b45fdf8400000000000000000000000078b5936f553681e7626f2f39567126445ae3ae3100000000000000000000000000000000000000000000000000000000000010e4"}
+→ send_transaction({"to": "0xc4973de5ee925b8219f1e74559fb217a8e355ecf", "data": "0x42842e0e00000000000000000000000025b1a05210cd81317e2addf657b7d5e4b45fdf8400000000000000000000000078b5936f553681e7626f2f39567126445ae3ae3100000000000000000000000000000000000000000000000000000000000010e4", "value": "0"})
+← {"status": "success", "hash": "0x21bf0b3e62efd82af539b07a8a29bf571ef731d28059c30272da72dcf2d51305", "gasUsed": "47141"}
+Final reply:
+I sent HOPE #4324 to 0x78b5936f553681e7626f2f39567126445ae3ae31, and the transaction went through.
+
+- **Transaction hash:** 0x21bf0b3e62efd82af539b07a8a29bf571ef731d28059c30272da72dcf2d51305
+- **Gas used:** 47,141
+
+Before sending, I checked that your wallet owned #4324 and that the recipient is a regular wallet, not a contract. I used `safeTransferFrom`, a transfer method that fails instead of sending an NFT to a contract that can't receive it.
+
+### Example 4
+Wallet: 0x72241ce9ac10b002e67ef74930f2906d2b166ea1
+User: Send my TheDelMundos #6927 (contract 0x313e99d23d6a9ed47af8dccd545c2685f21ec44b) to 0x953d2ce4c2919da0d31f9458a0346148927246a9.
+
+→ read_contract({"address": "0x313e99d23d6a9ed47af8dccd545c2685f21ec44b", "signature": "ownerOf(uint256)", "args": [6927], "returns": ["address"]})
+← {"result": ["0x72241ce9ac10b002e67ef74930f2906d2b166ea1"]}
+→ get_code({"address": "0x953d2ce4c2919da0d31f9458a0346148927246a9"})
+← {"code": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b"}
+→ get_code({"address": "0x313e99d23d6a9ed47af8dccd545c2685f21ec44b"})
+← {"code": "0x608060405260043610610392575f3560e01c8063715018a6116101de578063a9fc664e11610108578063d53913931161009d578063e985e9c51161006d578063e985e9c514610abe578063ebdfd72214610add578063f0f2c03614610af2578063f2fde38b14610b11575f80fd5b8063d539139314610a1d578063d547741f14610a50578063e3faad9414610a6f578063e8a3d48514610aaa575f80fd5b8063c270e84c116100d8578063c270e84c1461099f578063c4dbf6ef146109b3578063c87b56dd146109df578063cd02771a146109fe575f80fd5b8063a9fc664e1461092d578063aa98e0c61461094c578063b88d4fde14610961578063bd32fb6614610980575f80fd5b806394739e871161017e578063a14481941161014e578063a144819414 …[truncated]
+→ read_contract({"address": "0x313e99d23d6a9ed47af8dccd545c2685f21ec44b", "signature": "0x6a412749()", "returns": ["bool"]})
+← {"error": "RuntimeError: eth_call: execution reverted"}
+→ get_code({"address": "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"})
+← {"code": "0x6080604052600436106101c65760003560e01c806384b0196e116100f7578063d03c791411610095578063ea4d3c9b11610064578063ea4d3c9b14610568578063ed8101b51461059c578063f23a6e61146105bc578063ffa1ad74146105dc57600080fd5b8063d03c791414610500578063d087d28814610520578063d691c96414610535578063e9ae5c531461055557600080fd5b8063b0d691fe116100d1578063b0d691fe1461045f578063bc197c81146104ab578063c399ec88146104cb578063cef6d209146104e057600080fd5b806384b0196e146103b4578063a3f4df7e146103dc578063acb8cc491461043257600080fd5b80633ed01015116101645780634a58db191161013e5780634a58db19146103645780635c1c6dcd1461036c578063 …[truncated]
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x72241ce9ac10b002e67ef74930f2906d2b166ea1", "0x953d2ce4c2919da0d31f9458a0346148927246a9", 6927]})
+← {"data": "0x42842e0e00000000000000000000000072241ce9ac10b002e67ef74930f2906d2b166ea1000000000000000000000000953d2ce4c2919da0d31f9458a0346148927246a90000000000000000000000000000000000000000000000000000000000001b0f"}
+→ send_transaction({"to": "0x313e99d23d6a9ed47af8dccd545c2685f21ec44b", "data": "0x42842e0e00000000000000000000000072241ce9ac10b002e67ef74930f2906d2b166ea1000000000000000000000000953d2ce4c2919da0d31f9458a0346148927246a90000000000000000000000000000000000000000000000000000000000001b0f", "value": "0"})
+← {"status": "success", "hash": "0xe32b62ff1be5364e2db64021396e2d679cfa2f836318b2b27071b17ad7a5d4c3", "gasUsed": "69090"}
+Final reply:
+I sent TheDelMundos #6927 to 0x953d2ce4c2919da0d31f9458a0346148927246a9, and the transaction went through.
+
+- **Transaction hash:** 0xe32b62ff1be5364e2db64021396e2d679cfa2f836318b2b27071b17ad7a5d4c3 (gas used: 69,090)
+- **Ownership:** Before sending, I checked that your wallet owned #6927.
+- **Recipient:** The address is a regular wallet that runs MetaMask's EIP-7702 smart-account code. That setup can accept NFTs, so I used the transfer method that checks the recipient can receive them.
+
+### Example 5
+Wallet: 0x8a959c5c7632e50159d6181ebe9ab18275b5b2f3
+User: Send my Bumbos #558 (contract 0x4c2b7f6fb6b3ed84ede8cfc08af968d074db34cd) to 0xe937f4c5faef967bb8acceeeacc8a066ba59050b.
+
+→ read_contract({"address": "0x4c2b7f6fb6b3ed84ede8cfc08af968d074db34cd", "signature": "ownerOf(uint256)", "args": [558], "returns": ["address"]})
+← {"result": ["0x8a959c5c7632e50159d6181ebe9ab18275b5b2f3"]}
+→ get_code({"address": "0xe937f4c5faef967bb8acceeeacc8a066ba59050b"})
+← {"code": "0x"}
+→ abi_encode({"signature": "safeTransferFrom(address,address,uint256)", "args": ["0x8a959c5c7632e50159d6181ebe9ab18275b5b2f3", "0xe937f4c5faef967bb8acceeeacc8a066ba59050b", 558]})
+← {"data": "0x42842e0e0000000000000000000000008a959c5c7632e50159d6181ebe9ab18275b5b2f3000000000000000000000000e937f4c5faef967bb8acceeeacc8a066ba59050b000000000000000000000000000000000000000000000000000000000000022e"}
+→ send_transaction({"to": "0x4c2b7f6fb6b3ed84ede8cfc08af968d074db34cd", "data": "0x42842e0e0000000000000000000000008a959c5c7632e50159d6181ebe9ab18275b5b2f3000000000000000000000000e937f4c5faef967bb8acceeeacc8a066ba59050b000000000000000000000000000000000000000000000000000000000000022e", "value": "0"})
+← {"status": "success", "hash": "0xfaced10fa50f89d70053b18bd441ee5e8005d04e244b6f83580e099fc8127383", "gasUsed": "91291"}
+Final reply:
+I sent Bumbos #558 to 0xe937f4c5faef967bb8acceeeacc8a066ba59050b, and the transaction went through.
+
+- **Before sending:** I checked that your wallet owned #558. I also checked that the recipient is a regular wallet (no contract code).
+- **How it was sent:** I used `safeTransferFrom` on the Bumbos contract (0x4c2b7f6fb6b3ed84ede8cfc08af968d074db34cd).
+- **Transaction hash:** 0xfaced10fa50f89d70053b18bd441ee5e8005d04e244b6f83580e099fc8127383
+- **Gas used:** 91,291
+
+=== USER ===
+Send 1 of my 𝖕𝖔𝖘𝖙 𝖒𝖔𝖗𝖙𝖊𝖒 token id 13 (ERC-1155 contract 0x11b630b0fd7701db6a13f747e9fbf6f93a0792b8) to 0x2ec4a2bcd4f33c7c9aafab7cfa865ec15508bf62.
+
+(live run also had a 'Current time:' line after the book)

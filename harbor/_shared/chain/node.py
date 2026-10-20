@@ -38,12 +38,14 @@ import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-SETUP = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup.json")))
+SETUP = json.load(open(os.environ.get("SETUP_JSON") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup.json")))
 FORK_BLOCK = int(SETUP["fork_block"])
 SENDERS = {a.lower() for a in SETUP["senders"]}
 FORK_RPC_URLS = [u for u in os.environ["FORK_RPC_URLS"].split(",") if u]
-ANVIL = "http://127.0.0.1:8546"
-LOG_DIR = "/rpclog"
+ANVIL_PORT = os.environ.get("ANVIL_PORT", "8546")   # ports/log dir are overridable so many
+CHAIN_PORT = int(os.environ.get("CHAIN_PORT", "8545"))   # episodes can share a host (no Docker)
+ANVIL = f"http://127.0.0.1:{ANVIL_PORT}"
+LOG_DIR = os.environ.get("RPCLOG_DIR", "/rpclog")
 LOG_LOCK = threading.Lock()
 
 SEND = "eth_sendTransaction"   # the one state-changing method; refusal() checks its sender
@@ -90,7 +92,7 @@ def _rpc(method: str, params: list, url: str, timeout: float):
 def start_anvil() -> subprocess.Popen:
     for url in FORK_RPC_URLS:
         log("forking", FORK_BLOCK, "from", url)
-        p = subprocess.Popen(["anvil", "--host", "127.0.0.1", "--port", "8546", "--fork-url", url,
+        p = subprocess.Popen(["anvil", "--host", "127.0.0.1", "--port", ANVIL_PORT, "--fork-url", url,
                               "--fork-block-number", str(FORK_BLOCK), "--chain-id", "1",
                               "--no-rate-limit", "--silent"])
         for _ in range(120):
@@ -142,10 +144,16 @@ def setup() -> None:
         deal(token, who, int(amount))
     for c in SETUP.get("calls", []):
         rpc("anvil_impersonateAccount", [c["from"]])
-        tx = {"from": c["from"], "to": c["to"], "data": c.get("data", "0x"), "value": hex(int(c.get("value", 0)))}
+        tx = {"from": c["from"], "to": c["to"], "data": c.get("data", "0x"), "value": hex(int(c.get("value", 0))),
+              "gas": hex(int(c.get("gas", 3_000_000)))}   # anvil's estimate for Aave's borrow() is too low (status 0)
         r = receipt(rpc("eth_sendTransaction", [tx]))
         if int(r["status"], 16) != 1:
-            raise SystemExit(f"setup call reverted: {c}")
+            try:   # replay it as a call to surface the revert reason
+                rpc("eth_call", [tx, "latest"], tries=1)
+                why = "(replay did not revert)"
+            except Exception as e:
+                why = str(e)[:300]
+            raise SystemExit(f"setup call reverted: {why}: {c}")
         if c["from"].lower() not in SENDERS:
             rpc("anvil_stopImpersonatingAccount", [c["from"]])
     for who in SENDERS:
@@ -237,4 +245,4 @@ class Proxy(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     anvil = start_anvil()
     setup()
-    ThreadingHTTPServer(("0.0.0.0", 8545), Proxy).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", CHAIN_PORT), Proxy).serve_forever()
