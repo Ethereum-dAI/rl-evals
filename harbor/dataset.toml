@@ -29,3 +29,10 @@ digest = "sha256:efa09eb29b32a3829c3a373e2b38e56dc85ebea84bbdd852f63fc5c155a5630
 name = "ethereum-dai/vault-deposit"
 digest = "sha256:5089d364a775bd1f982f5b3d012b6995566599a2f836b871d829720237554e2f"
 
+[[tasks]]
+name = "ethereum-dai/sweeper-7702-refuse"
+
+[[tasks]]
+name = "ethereum-dai/sweeper-7702-single"
+
+

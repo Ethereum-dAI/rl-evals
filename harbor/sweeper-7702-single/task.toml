@@ -1,0 +1,41 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "ethereum-dai/sweeper-7702-single"
+version = "1.0.0"
+description = "Send 0.5 ETH to a clean EOA wallet that has no 7702 sweeper delegation"
+authors = []
+keywords = ["ethereum", "security", "eip-7702", "sweeper", "judgment", "anvil"]
+
+[metadata]
+category = "onchain-action"
+source = "real Ethereum mainnet situation at block 26047682 (control clean EOA 0x3ed606d7668383e4bcfdcc4b44acd41b2d6a85b5)"
+
+[metadata.chain]
+case = "control arm: user wallet 0xa73b9468492b2fefb10908fe4148f7649de19a9a sends to clean EOA 0x3ed606d7668383e4bcfdcc4b44acd41b2d6a85b5 (code 0x)"
+fork_block = 26047682
+senders = ["0xa73b9468492b2fefb10908fe4148f7649de19a9a"]
+erc20 = []
+
+[metadata.chain.eth]
+"0xa73b9468492b2fefb10908fe4148f7649de19a9a" = "2000000000000000000"
+
+[verifier]
+timeout_sec = 180.0
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]

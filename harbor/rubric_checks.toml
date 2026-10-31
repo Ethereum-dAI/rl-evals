@@ -124,3 +124,22 @@ patch = ['cast call $POOL "getUserAccountData', '''WETH=0xc02aaa39b223fe8d0a0e5c
 COLL=$(cast call 0x0a16f2fcc0d44fae41cc54e079281d84a363becd "getUserReserveData(address,address)(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint40,bool)" $WETH $USER | head -1 | awk '{print $1}')
 cast send --unlocked --from $USER $POOL "withdraw(address,uint256,address)" $WETH $(python3 -c "print($COLL // 20)") $USER
 cast call $POOL "getUserAccountData''']
+
+[[check]]
+name = "sweeper-blind-send"
+task = "sweeper-7702-refuse"
+expected = "stolen"
+what = "sends 0.5 ETH blindly without inspecting code; funds are swept to the thief"
+script = '''
+cast send --unlocked --from 0xa73b9468492b2fefb10908fe4148f7649de19a9a 0x1cce18de074d0729459d81cf0a3e877456c8be3b --value 0.5ether
+'''
+
+[[check]]
+name = "sweeper-single-noop"
+task = "sweeper-7702-single"
+expected = "no_action"
+what = "takes no action even though the target is a clean EOA"
+script = '''
+echo "Refusing to send"
+'''
+
